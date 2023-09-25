@@ -1,0 +1,557 @@
+/* To reset all the defautl css Property */
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+/* *,
+*::before,
+*::after{
+box-sizing: border-box;
+} */
+
+html{
+
+scroll-behavior: smooth;
+}
+
+/* Declaraton of the variables */
+:root{
+  --color-1:#174973;
+  --color-2:#032848;
+  --color-3:#c9d8fa;
+  --color-4:#007aff;
+  --color-5:#f5ae0e;
+  --color-6:#00004de6; 
+  --color-7:#8e6c33; 
+  --color-8:#fbf700;
+  --color-9:#06bcfb;
+}
+
+body{
+  background-color: var(--color-3);
+  font-family: Arial, Helvetica, sans-serif;
+  color: #fff;
+  font-size: 16px;
+}
+
+.container1{
+  background-color:var(--color-1);
+  display: flex;
+  /* flex-wrap: wrap; */
+  justify-content:space-between;
+  align-items: center;
+
+}
+
+.container1 ul{
+  list-style-type: none;
+  display: flex;
+  gap:5px;
+  margin-left: 5px;
+  font-size: 10px;
+  justify-content: center;
+}
+.container1 ul img{
+  height: 10px;
+  margin-top:5px;
+  color: #fff;
+}
+.left{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 50%;
+  padding-right: 15rem;
+}
+.right{
+  width:50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-left: 24rem;
+}
+
+/* styling below top navbar  */
+
+
+
+.header{
+  background-color: var(--color-2);
+
+  
+  }
+
+.container2{
+
+display: flex;
+justify-content:center;
+background-color: var(--color-1);
+/* gap:5px; */
+/* width: 100%; */
+}
+
+.container2 ul{
+  list-style-type: none;
+  display: flex;
+  gap:4rem; 
+  padding-top: 0.3em;
+  padding-bottom: 0.4em;
+}
+
+.container3{
+ display: flex;
+ justify-content: center;
+}
+
+
+
+/* for navigation dropdown menu button */
+  /* Dropdown Button */
+  .dropbtn {
+    background-color: #174973;
+    color: white;
+    padding: 3px;
+    font-size: 16px;
+    border: none;
+  }
+  
+  /* The container <div> - needed to position the dropdown content */
+  .dropdown {
+    position: relative;
+    display: inline-block;
+  }
+  
+  /* Dropdown Content (Hidden by Default) */
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f1f1f1;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+  }
+  
+  /* Links inside the dropdown */
+  .dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+  }
+  
+  /* Change color of dropdown links on hover */
+  .dropdown-content a:hover {
+    background-color: #ddd;
+  }
+  
+  /* Show the dropdown menu on hover */
+  .dropdown:hover .dropdown-content {
+    display: block;
+  }
+  
+  /* Change the background color of the dropdown button when the dropdown content is shown */
+  .dropdown:hover .dropbtn {
+    background-color: #174973;
+    color:var(--color-5) ;
+    cursor: pointer;
+  }
+  
+  
+  /* end of navigation dropdown menu  */
+  
+  /* above the vedio part  */
+.flash{
+  background-color: var(--color-6);
+  margin-top: 0.2rem;
+  /* height: 4em; */
+}
+
+  /* end of the vedio part */
+  /* video part of the isro */
+  .vid{
+    background-size: cover;
+    height: 70em;
+    width: 100%;
+  } 
+
+  /* end of vedio part  */
+  /* Hignlights*/
+.main{
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-2);
+  font-size: 20px;
+  margin: 2em;
+}
+.m-right{
+   
+   width: 50%;
+   /* display: flex;
+   flex-wrap: wrap; */
+  }
+.ig{
+  display: flex;
+  flex-wrap: wrap;
+  /* width: 50%; */
+  list-style-type: none;
+}
+.ig li img {
+  width: 46em;
+}
+
+
+
+.im{
+  /* sizes:"(max-width:480px) 320px,(max-width:800px) 640px,(max-width:1080px) 1024px,100vw" */
+  /* size: 320px, 640px, 1024px,100vw ; */
+  height:15rem;
+  margin: 2rem;
+} 
+.m-left{
+  margin-left: 2em;
+  width: 50%;
+}
+/* ISRO PORTAL */
+.ISPortal{
+  background-color: var(--color-6);
+  
+}
+.ISPortal ul{
+  display: flex;
+  gap:1rem;
+  list-style-type: none;
+  margin-bottom:1em;
+  justify-content: space-around;
+  padding: 1rem;
+}
+.ISPortal h2{
+  font-size: 22px;
+  font-weight: 700;
+  font-family: "Verdan",serif;
+  display: flow-root;
+  color: #fff;
+  padding-top: 1rem;
+  padding-left: 1.8rem;
+
+}
+
+.is-img{
+  border-radius: 6rem;
+  width: 5rem;
+  border:2px solid #007aff ;
+}
+
+.ISPortal ul li{
+  display: flex;
+  flex-direction:column;
+  font-size: 15px;
+  text-align: center;
+  margin: 9px 0 0 0;
+}
+
+
+/* RECENT UPDATE section */
+
+.recent-update{
+  background:#fff;
+  box-shadow: 5px 10px 29px rgba(129,134,169,0.88);
+  border-top:2px solid #0606df;
+  margin: 1.6rem;
+  display: flex;
+  flex-wrap: wrap;
+
+}
+.r-ul{
+  list-style-type: none;
+  display: flex;
+  gap:1.8rem;
+  justify-content: center;
+  padding: .8rem .8em 1.5em;
+}
+
+.r-img{
+  width: 27rem;
+  border: 1.5px solid var(--color-2);
+}
+
+h3{
+  font-size: 22px;
+  font-weight: 700;
+  font-family: "Verdan",serif;
+  display: flow-root;
+  color: var(--color-1);
+  padding:.7rem;
+  /* padding-left: 1.8rem; */
+}
+.r-img :hover{
+  opacity: .75; 
+  background: linear-gradient(0deg,rgba(0,0,0,0.9) 0%,rgba(0,0,0,0.8) 20%,rgba(0,212,255,0) 100%);
+  transition: 0.4s;
+
+}
+/* use ful links */
+.footer{
+  margin-top: 5rem;
+  width:100%;
+  padding: 2em 4em;
+  background:linear-gradient(90deg,rgb(15 10 20) 15%,rgb(72 37 83) 50%,rgb(4 5 75) 91%) ;
+  display: flex;
+  color: #fff;
+  justify-content: center;
+  height: 10rem;
+
+}
+
+.footer ul{
+ list-style-type: none;
+ display: flex;
+ gap: 2rem;
+ padding-top: 2rem;
+margin-left: 25rem;
+}
+
+.dropbtn-b {
+  background-color: var(--color-7);
+  color: white;
+  padding: 3px;
+  font-size: 16px;
+  border: none;
+  border-radius: 0.5rem; 
+  width: 10rem;
+}
+
+/* The container <div> - needed to position the dropdown-b content */
+.dropdown-b {
+  position: relative;
+  display: inline-block;
+}
+
+
+/* Change the background color of the dropdown-b button when the dropdown-b content is shown */
+.dropdown-b:hover .dropbtn-b:hover {
+  background-color: rgb(36,28,139);
+  color:#fff ;
+  cursor: pointer;
+}
+
+
+
+.dropbtn-c{
+  padding: 0.5rem;
+  background: var(--color-8);
+  color: black;
+  padding: 3px;
+  font-size: 16px;
+  border: none;
+  border-radius: 0.5rem; 
+  width: 4rem;
+  cursor: pointer;
+}
+
+
+
+
+
+/*  lower bar*/
+.bott-bar{
+
+  background-color: var(--color-6);
+  color: #fff;
+  border-top: 0.01px solid #f5ae0e;
+}
+
+.bott-bar-ul{
+  display: flex;
+  list-style-type: none;
+  gap:3em;
+  height:30rem;
+  /* border-top: 0.01px solid #f5ae0e; */
+}
+
+.addr{
+  margin: 2rem;
+  /* padding: 2rem; */
+  padding-left: 12rem;
+  padding-top: 4rem;
+
+}
+
+
+.addr h4{
+font-size: 14px;
+color: #f1f1f1;
+padding-bottom: .5rem;
+
+}
+.addr p{
+  background-color: #ffffff53;
+  padding: .7rem;
+  
+}
+
+.adr {
+ text-align: center;
+ border-bottom: 2.5px solid white;
+
+  }
+
+.in-div ul{
+  list-style-type: none;
+}
+
+.bott-bar-2{
+  display: flex;
+  flex-direction:column;
+  justify-content: center;
+  background-color: var(--color-6);
+  color: #fff;
+  border-top: 0.01px solid #f5ae0e;
+  padding-top: 2rem;
+}
+
+.bott-bar-2 h6{
+  padding-bottom: 1rem;
+  display: flex;
+  justify-content:center;
+  padding-left: 41rem;
+  color: greenyellow;
+  
+}
+
+.bott-bar-2 p{
+  padding-top: .5rem;
+  display: flex;
+  justify-content: center;
+  
+}
+
+
+.i-div{
+  width: 20rem;
+  display: flex;
+  justify-content: center;
+
+  gap:2rem;
+  /* flex-direction: column; */
+}
+
+.in-div ul{
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+  /* padding-left: 2rem; */
+  /* padding-bottom: 5rem; */
+  padding-top: 6rem;
+}
+
+/* div.sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  background-color: yellow;
+  padding: 50px;
+  font-size: 20px;
+} */
+
+.news {
+  
+  background: linear-gradient(45deg,#1558ba 20%,#5e93e0 60%,#020c44);
+  width: 50rem;
+}
+
+.news ul{
+  list-style-type: none;
+  /* padding: 1.2rem; */
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  font-size: .9rem;
+
+
+}
+.news ul li{
+  border-top: 1px solid #fff;
+  border-bottom: 1px solid #fff;
+  padding: .5rem;
+  /* font-size: 1rem; */
+}
+
+/* arrow sign */
+.arrow {
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  display: inline-block;
+  padding: 3px;
+  margin-bottom: .15rem;
+}
+.down {
+  transform: rotate(45deg);
+  -webkit-transform: rotate(45deg);
+}
+.arrow-i {
+  border: solid var(--color-5);
+  border-width: 0 2px 2px 0;
+  display: inline-block;
+  padding: 3px;
+  margin-bottom: .15rem;
+}
+
+.right-i{
+  transform: rotate(-45deg);
+  -webkit-transform: rotate(-45deg);
+  margin-right: 0.5rem;
+  /* color: var(--color-5); */
+}
+
+.flash{
+  /* display: flex;
+  flex-direction:column;
+  /* padding-top: 1rem;  */
+  /* gap: 5rem; */
+  /* cursor: pointer; */ 
+}
+.scrolleft{
+
+  display: flex;
+  flex-direction: row;
+}
+
+.flash-1{
+  display: flex;
+  gap:1rem;
+ 
+} 
+
+/* .float{
+	position:fixed;
+	width:60px;
+	height:60px;
+	bottom:40px;
+	right:40px;
+	background-color:#0C9;
+	color:#FFF;
+	border-radius:50px;
+	text-align:center;
+	box-shadow: 2px 2px 3px #999;
+} */
+
+
+/* adddd */
+
+.float{
+	position:fixed;
+	width:60px;
+	height:60px;
+	bottom:40px;
+	right:40px;
+	/* background-color:#0C9; */
+	color:#FFF;
+	border-radius:50px;
+	text-align:center;
+	box-shadow: 1px 1px 4px #f4a507ea;
+}
+
+.my-float{
+	margin-top:22px;
+}
