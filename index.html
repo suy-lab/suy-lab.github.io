@@ -1,182 +1,353 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>anotetoself · a research journal for your ideas</title>
-<meta name="description" content="A quiet, hand-drawn research journal. Capture ideas, log progress, and keep your reading close." />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 8 C9 5.5 13 5.5 16 8.5 C19 5.5 23 5.5 28 8 V26 C23 23.5 19 23.5 16 26.5 C13 23.5 9 23.5 4 26 Z M16 8.5 V26.5' fill='%23dff25b' stroke='%231b1b1b' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/journal.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Research Journal</title>
+  <meta name="description" content="A one-page research journal: papers, ideas and daily logs on pastel cards, linked on a connection map.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Variable weight ranges (fewer files), loaded without blocking the first paint -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Instrument+Sans:wght@400..600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Instrument+Sans:wght@400..600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Instrument+Sans:wght@400..600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"></noscript>
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body data-page="journal">
 
-<main class="wrap" id="page" data-page="today">
-
-  <!-- ============ HERO ============ -->
-  <section class="hero">
-    <div>
-      <span class="eyebrow" id="todayLabel">today</span>
-      <h1 class="display">A quiet notebook for your <em>newest</em> and <em class="hl">wildest</em> ideas.</h1>
-      <form class="capture" id="composeForm" autocomplete="off">
-        <div class="seg" role="group" aria-label="Save as">
-          <button type="button" data-mode="log" aria-pressed="true">Log a note</button>
-          <button type="button" data-mode="idea" aria-pressed="false">New idea</button>
-        </div>
-        <div class="capture-row">
-          <label for="entryText" class="sr-only">What's on your mind?</label>
-          <textarea id="entryText" class="textarea" maxlength="2000" placeholder="What's on your mind?"></textarea>
-          <button type="submit" class="btn" id="saveBtn">Save note</button>
-        </div>
-        <div class="moods" id="moodRow" role="group" aria-label="Mood (optional)">
-          <span class="lbl">Mood</span>
-          <button type="button" class="mood" data-mood="🙂" aria-pressed="false" aria-label="good">🙂</button>
-          <button type="button" class="mood" data-mood="😌" aria-pressed="false" aria-label="calm">😌</button>
-          <button type="button" class="mood" data-mood="😵‍💫" aria-pressed="false" aria-label="overwhelmed">😵‍💫</button>
-          <button type="button" class="mood" data-mood="😴" aria-pressed="false" aria-label="tired">😴</button>
-          <button type="button" class="mood" data-mood="🔥" aria-pressed="false" aria-label="motivated">🔥</button>
-        </div>
-        <p class="fine"><span id="charCount">0</span>/2000 · ctrl + enter to save · stays in this browser</p>
-      </form>
-    </div>
-    <div class="hero-art" id="heroArt" data-art="desk"></div>
-  </section>
-
-  <!-- ============ AT A GLANCE ============ -->
-  <section class="section" aria-labelledby="glanceTitle">
-    <h2 class="section-title" id="glanceTitle">Everything you're <em>chasing</em>, at a glance.</h2>
-    <div class="features">
-      <a class="feature" href="ideas.html#spark">
-        <div class="spot" data-art="bulb"></div>
-        <div class="num" id="statSpark">0</div>
-        <h3>Fresh sparks</h3>
-        <p>New ideas waiting for a first look. Catch them before they fade.</p>
+  <!-- ============ Header ============ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#top" aria-label="Research Journal, back to top">
+        <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 3h6" /><path d="M10 3v6.2L4.6 18.4A1.7 1.7 0 0 0 6.1 21h11.8a1.7 1.7 0 0 0 1.5-2.6L14 9.2V3" /><path d="M7.5 15h9" />
+        </svg>
+        <span class="brand-name">Research Journal</span>
       </a>
-      <a class="feature" href="ideas.html#exploring">
-        <div class="spot" data-art="magnifier"></div>
-        <div class="num" id="statExploring">0</div>
-        <h3>Being explored</h3>
-        <p>Ideas you're digging into or testing right now.</p>
-      </a>
-      <a class="feature" href="log.html">
-        <div class="spot" data-art="plane"></div>
-        <div class="num" id="statWeek">0</div>
-        <h3>Logged this week</h3>
-        <p>Notes from the last seven days: what you tried, read and noticed.</p>
-      </a>
-      <a class="feature" href="library.html">
-        <div class="spot" data-art="book"></div>
-        <div class="num" id="statRead">0</div>
-        <h3>On the reading list</h3>
-        <p>Papers, books and links still waiting on your shelf.</p>
-      </a>
-    </div>
-    <p class="features-foot" id="statFoot"></p>
-  </section>
-
-  <!-- ============ FOCUS BAND ============ -->
-  <section class="section">
-    <div class="band" aria-label="Daily focus">
-      <div>
-        <h2>Be the <em>first</em> to follow your own curiosity.</h2>
-        <div class="goal-line">
-          Today, I will spend
-          <span class="stepper">
-            <button type="button" id="minDown" aria-label="Fewer minutes">−</button>
-            <output id="minutes" aria-live="polite">30</output>
-            <button type="button" id="minUp" aria-label="More minutes">+</button>
-          </span>
-          mins on
-          <label for="goalTask" class="sr-only">Task</label>
-          <input class="line-input" id="goalTask" maxlength="40" placeholder="my research" />
-        </div>
-        <div class="timer-row">
-          <button type="button" class="btn" id="timerBtn">▶ Start</button>
-          <div class="progress" aria-hidden="true"><i id="timerFill"></i></div>
-          <span class="timer-time" id="timerTime">30:00</span>
-        </div>
-        <div class="reward-row">
-          <label for="rewardInput">Then I'll reward myself with</label>
-          <input class="input" type="text" id="rewardInput" maxlength="40" placeholder="a walk at the beach" />
-          <label class="earned"><input type="checkbox" id="earned" /> earned</label>
-        </div>
-      </div>
-      <div class="band-art" data-art="writer"></div>
-    </div>
-  </section>
-
-  <!-- ============ LOG + NEEDS ============ -->
-  <section class="section two-col">
-    <article class="card" aria-labelledby="feedTitle">
-      <div class="card-head">
-        <h2 id="feedTitle">Where I'm <em>at</em></h2>
-        <a class="linkish" href="log.html">Full log →</a>
-      </div>
-      <ul class="timeline scroll" id="timeline" aria-live="polite"></ul>
-    </article>
-
-    <article class="card" aria-labelledby="needsTitle">
-      <h2 id="needsTitle">What I <em>need</em></h2>
-      <ul class="need-list" id="needList"></ul>
-      <form class="inline-form" id="needForm" autocomplete="off">
-        <label for="needInput" class="sr-only">Add a need</label>
-        <input id="needInput" class="line-input" maxlength="160" placeholder="Add something you need…" />
-        <button type="submit" class="btn-outline small">Add</button>
-      </form>
-    </article>
-  </section>
-
-  <!-- ============ SAY HELLO / MANTRA ============ -->
-  <section class="section">
-    <div class="hello">
-      <div class="hello-art" data-art="wave"></div>
-      <div>
-        <span class="eyebrow">Today's mantra</span>
-        <p class="mantra" id="mantra" aria-live="polite">I am on the right path.</p>
-        <p>A small reminder for the days when the research feels slow. Tap for another, or give yourself a pep talk.</p>
-        <div class="hello-actions">
-          <button type="button" class="btn-outline" id="mantraNext">Another one</button>
-          <button type="button" class="btn" id="gotThis">I got this.</button>
-          <span class="pep-count" id="pepCount"></span>
-        </div>
+      <nav class="page-nav" aria-label="Pages">
+        <a class="page-link" href="index.html" aria-current="page">This month</a>
+        <a class="page-link" href="archive.html">Archive</a>
+      </nav>
+      <p class="header-date" id="header-date"></p>
+      <button class="sync-btn" id="sync-open" type="button" aria-label="Save and sync">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 7.97"/><path d="M12 12v8M9 15l3-3 3 3"/></svg>
+        <span class="sync-label">Save &amp; sync</span>
+        <span class="sync-badge" id="sync-badge" hidden></span>
+      </button>
+      <div class="perch" id="owl-perch" aria-hidden="true">
+        <svg viewBox="0 0 120 40" width="120" height="40">
+          <path class="perch-branch" d="M2 31 C30 27 70 34 118 28" />
+          <path class="perch-twig" d="M88 31 C92 24 98 20 106 18" />
+          <ellipse class="perch-leaf" cx="108" cy="16" rx="6" ry="3.2" transform="rotate(-25 108 16)" />
+          <ellipse class="perch-leaf" cx="14" cy="26" rx="5.5" ry="3" transform="rotate(-150 14 26)" />
+        </svg>
       </div>
     </div>
-  </section>
+  </header>
 
-  <!-- ============ PLAYER ============ -->
-  <section class="section">
-    <article class="card player" id="player" aria-label="Focus tapes">
-      <div class="cassette" aria-hidden="true"><span class="reel l"></span><span class="reel r"></span></div>
-      <div style="min-width:0">
-        <span class="eyebrow" style="margin-bottom:4px">Focus tapes <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span></span>
-        <div class="track-title" id="trackTitle">—</div>
-        <div class="track-artist" id="trackArtist">—</div>
-        <div class="seek" id="seek" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="seekFill"></i></div>
-        <div class="times"><span id="tCur">0:00</span><span id="tDur">0:00</span></div>
-      </div>
+  <main class="layout" id="top">
+    <!-- ============ Left: journal cards ============ -->
+    <section class="journal" id="journal" aria-labelledby="journal-heading">
+      <header class="journal-intro">
+        <p class="eyebrow" id="page-eyebrow">This month</p>
+        <h1 id="journal-heading">What are you finding out?</h1>
+        <p class="lede">Papers you read, ideas you chase and what you did each day, linked together. Type <kbd>[[</kbd> or <kbd>@</kbd> in your notes to connect entries.</p>
+      </header>
+
       <div class="controls">
-        <button type="button" class="ctrl" id="prevBtn" aria-label="Previous track"><svg aria-hidden="true"><use href="#i-prev"/></svg></button>
-        <button type="button" class="ctrl big" id="playBtn" aria-label="Play"><svg aria-hidden="true"><use href="#i-play"/></svg></button>
-        <button type="button" class="ctrl" id="nextBtn" aria-label="Next track"><svg aria-hidden="true"><use href="#i-next"/></svg></button>
+        <div class="filters" id="filters" role="group" aria-label="Filter by entry type"></div>
+        <div class="search-row">
+          <div class="search">
+            <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
+            <label class="visually-hidden" for="search">Search entries</label>
+            <input id="search" type="search" placeholder="Search titles, authors and notes" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="date-filter" role="group" aria-label="Filter by date">
+            <label class="date-field"><span>From</span><input id="date-from" type="date"></label>
+            <label class="date-field"><span>To</span><input id="date-to" type="date"></label>
+            <button class="text-btn" id="date-clear" type="button" hidden>Clear dates</button>
+          </div>
+        </div>
       </div>
-    </article>
-  </section>
 
-  <!-- ============ BACKUP CTA ============ -->
-  <section class="cta">
-    <div class="ghost" data-art="ghost" data-ghost></div>
-    <h2>Keep your research <em>safe</em>.</h2>
-    <p>Everything you write lives only in this browser. Download a backup now and then so nothing gets lost.</p>
-    <div class="cta-actions">
-      <button type="button" class="btn" data-action="export">Download backup</button>
-      <button type="button" class="btn-outline" data-action="import">Restore</button>
-    </div>
-  </section>
-</main>
+      <div class="list-bar">
+        <div class="list-info">
+          <p class="entry-count" id="entry-count"></p>
+          <span class="month-dl" role="group" aria-label="Download this month">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+            <button class="dl-btn" type="button" data-month-dl="json">JSON</button>
+            <button class="dl-btn" type="button" data-month-dl="md">Markdown</button>
+          </span>
+        </div>
+        <button class="btn btn-primary" id="new-entry" type="button" aria-expanded="false" aria-controls="composer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          New entry
+        </button>
+      </div>
 
-<script src="assets/core.js"></script>
-<script src="assets/today.js"></script>
+      <!-- Entry form -->
+      <section class="composer" id="composer" aria-labelledby="composer-heading" hidden>
+        <form class="entry-form" id="entry-form" data-type="paper" autocomplete="off" novalidate>
+          <div class="composer-top">
+            <h2 id="composer-heading">New entry</h2>
+            <div class="type-switch" role="radiogroup" aria-label="Entry type">
+              <label class="type-option type-paper"><input type="radio" name="type" value="paper" checked><span>Paper</span></label>
+              <label class="type-option type-idea"><input type="radio" name="type" value="idea"><span>Idea</span></label>
+              <label class="type-option type-log"><input type="radio" name="type" value="log"><span>Daily log</span></label>
+            </div>
+          </div>
+
+          <div class="import paper-only">
+            <div class="doi-row">
+              <label class="field doi-field">
+                <span>DOI</span>
+                <input id="f-doi" type="text" placeholder="10.48550/arXiv.1706.03762 or https://doi.org/…" spellcheck="false">
+              </label>
+              <button class="btn btn-soft" id="doi-fetch" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+                Fetch details
+              </button>
+            </div>
+            <details class="bibtex-box" id="bibtex-box">
+              <summary>Or paste BibTeX</summary>
+              <label class="visually-hidden" for="f-bibtex">BibTeX</label>
+              <textarea id="f-bibtex" rows="6" spellcheck="false" placeholder="@article{key,&#10;  title = {…},&#10;  author = {Last, First and …},&#10;  year = {2024}&#10;}"></textarea>
+              <button class="btn btn-soft" id="bibtex-import" type="button">Fill from BibTeX</button>
+            </details>
+            <p class="import-status" id="import-status" role="status"></p>
+          </div>
+
+          <label class="field">
+            <span>Title</span>
+            <input id="f-title" type="text" maxlength="300" required>
+          </label>
+
+          <div class="field-grid paper-only">
+            <label class="field span-2"><span>Authors <small>separate with ;</small></span><input id="f-authors" type="text"></label>
+            <label class="field"><span>Year</span><input id="f-year" type="text" inputmode="numeric" maxlength="4"></label>
+            <label class="field span-3"><span>Venue</span><input id="f-venue" type="text"></label>
+            <label class="field span-4"><span>Link</span><input id="f-url" type="url" placeholder="https://"></label>
+          </div>
+
+          <div class="field-grid idea-only">
+            <label class="field span-2">
+              <span>Status</span>
+              <select id="f-status">
+                <option value="open">Open question</option>
+                <option value="exploring">Exploring</option>
+                <option value="answered">Answered</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="field-grid log-only">
+            <label class="field span-2"><span>Date</span><input id="f-date" type="date"></label>
+          </div>
+
+          <div class="field notes-field">
+            <label for="f-body">Notes <small>Markdown: **bold**, *italic*</small></label>
+            <div class="notes-wrap">
+              <textarea id="f-body" rows="6" placeholder="What stood out? Type [[ or @ to link another entry."
+                aria-autocomplete="list" aria-controls="mention-menu" aria-expanded="false"></textarea>
+              <ul class="mention-menu" id="mention-menu" role="listbox" aria-label="Entries you can link" hidden></ul>
+            </div>
+          </div>
+
+          <div class="link-preview" id="link-preview" aria-live="polite"></div>
+
+          <div class="composer-actions">
+            <button class="btn btn-primary" id="save-entry" type="submit">Save entry</button>
+            <button class="btn btn-ghost" id="cancel-entry" type="button">Cancel</button>
+          </div>
+        </form>
+      </section>
+
+      <h2 class="visually-hidden" id="entries-heading">Entries</h2>
+      <div class="entry-list" id="entry-list" aria-labelledby="entries-heading"></div>
+
+      <footer class="journal-footer">
+        <p>Saved in this browser. Use <strong>Save &amp; sync</strong> to download or keep it on GitHub.</p>
+        <button class="text-btn" id="reset-journal" type="button">Reset to the 3 sample entries</button>
+      </footer>
+    </section>
+
+    <!-- ============ Right: connections panel (opened from a card) ============ -->
+    <aside class="map-panel" id="map-panel" aria-labelledby="map-heading" hidden>
+      <div class="map-head">
+        <div class="map-title-row">
+          <h2 id="map-heading" tabindex="-1">Connections</h2>
+          <button class="icon-btn" id="map-close" type="button" aria-label="Close connections">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </div>
+        <nav class="trail" id="map-trail" aria-label="Your path through the entries"></nav>
+        <div class="map-tools">
+          <div class="depth-switch" role="radiogroup" aria-label="How far to look">
+            <label class="depth-option"><input type="radio" name="depth" value="1" checked><span>Direct links</span></label>
+            <label class="depth-option"><input type="radio" name="depth" value="2"><span>2 steps</span></label>
+          </div>
+          <p class="map-summary" id="map-summary" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="map-scroll" id="map-scroll">
+        <div class="map-board" id="map-board">
+          <svg class="map-edges" id="map-edges" aria-hidden="true"></svg>
+          <div class="gpop" id="map-pop"></div>
+        </div>
+      </div>
+      <div class="map-legend" aria-hidden="true">
+        <span><i class="legend-dot legend-paper"></i>Papers, left</span>
+        <span><i class="legend-dot legend-idea"></i>Ideas, upper right</span>
+        <span><i class="legend-dot legend-log"></i>Logs, lower right</span>
+        <span><i class="legend-arrow"></i>Points to the entry being linked</span>
+        <span><i class="legend-dash"></i>Possible connection</span>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ============ Save & sync: downloads, import, GitHub ============ -->
+  <dialog class="sync-dialog" id="sync-dialog" aria-labelledby="sync-title">
+    <form class="sync-form" method="dialog">
+      <header class="sync-head">
+        <h2 id="sync-title">Save &amp; sync</h2>
+        <button class="icon-btn" value="close" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      <section class="sync-section" aria-labelledby="dl-title">
+        <h3 id="dl-title">Download</h3>
+        <p class="sync-help">Keep a copy, or commit the JSON file to your repository yourself.</p>
+        <div class="sync-row">
+          <label class="field sync-month"><span>Month</span><select id="dl-month"></select></label>
+          <button class="btn btn-soft" type="button" data-dl="json">JSON</button>
+          <button class="btn btn-soft" type="button" data-dl="md">Markdown</button>
+        </div>
+        <div class="sync-row">
+          <button class="btn btn-ghost" type="button" data-dl="all">Download everything (JSON)</button>
+          <button class="btn btn-ghost" type="button" id="import-btn">Import a JSON file…</button>
+          <input type="file" id="import-file" accept=".json,application/json" hidden>
+        </div>
+      </section>
+
+      <section class="sync-section" aria-labelledby="gh-title">
+        <h3 id="gh-title">Save to GitHub</h3>
+        <p class="sync-help">
+          Each month is saved as <code>data/2026-10.json</code> (plus <code>data/index.json</code>) in your repository,
+          and this site loads them on any computer. <strong>Your repository is public, so anyone can read these notes.</strong>
+        </p>
+        <p class="sync-help">
+          Use a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a>
+          with access to <strong>only this repository</strong> and <strong>Contents: Read and write</strong>.
+          It is sent only to GitHub. Only remember it on your own computer.
+        </p>
+        <div class="field-grid">
+          <label class="field span-2"><span>Owner</span><input id="gh-owner" type="text" autocomplete="off" spellcheck="false" placeholder="your-username"></label>
+          <label class="field span-2"><span>Repository</span><input id="gh-repo" type="text" autocomplete="off" spellcheck="false" placeholder="research-journal"></label>
+          <label class="field span-2"><span>Branch</span><input id="gh-branch" type="text" autocomplete="off" spellcheck="false" placeholder="main"></label>
+          <label class="field span-2"><span>Folder</span><input id="gh-folder" type="text" autocomplete="off" spellcheck="false" placeholder="data"></label>
+          <label class="field span-4"><span>Token</span><input id="gh-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+          <label class="check span-4"><input id="gh-remember" type="checkbox"> Remember the token on this computer</label>
+        </div>
+        <p class="sync-dirty" id="sync-dirty"></p>
+        <p class="import-status sync-status" id="sync-status" role="status"></p>
+        <div class="sync-row">
+          <button class="btn btn-primary" type="button" id="sync-push">Save changes to GitHub</button>
+          <button class="btn btn-ghost" type="button" id="sync-pull">Load from GitHub</button>
+        </div>
+      </section>
+    </form>
+  </dialog>
+
+  <!-- ============ Character: the scientist ============ -->
+  <div class="character scientist" id="scientist" data-state="walking" data-pace="walk">
+    <p class="char-bubble" aria-hidden="true"></p>
+    <span class="char-zzz" aria-hidden="true"><span>z</span><span>z</span><span>Z</span></span>
+    <button class="char-hit" type="button" aria-label="Say hello to Dr. Pip, the scientist">
+      <span class="char-flip">
+        <svg class="char-svg" viewBox="0 0 80 120" width="60" height="90" overflow="visible" aria-hidden="true">
+          <ellipse class="shadow" cx="40" cy="117" rx="20" ry="2.8" />
+          <g class="arm arm-back">
+            <rect class="coat-shade" x="47" y="52" width="9" height="28" rx="4.5" />
+            <circle class="skin" cx="51.5" cy="80" r="4" />
+          </g>
+          <g class="leg leg-back">
+            <rect class="trousers" x="41" y="88" width="8" height="26" rx="4" />
+            <ellipse class="shoe" cx="47" cy="114.5" rx="7" ry="3.2" />
+          </g>
+          <g class="leg leg-front">
+            <rect class="trousers" x="31" y="88" width="8" height="26" rx="4" />
+            <ellipse class="shoe" cx="37" cy="114.5" rx="7" ry="3.2" />
+          </g>
+          <g class="torso">
+            <path class="coat" d="M26 52 Q40 46 54 52 L58 94 Q40 98 22 94 Z" />
+            <path class="shirt" d="M35 49 L40 60 L45 49 Z" />
+            <path class="coat-line" d="M40 60 L40 95" />
+            <rect class="pocket" x="44" y="66" width="8" height="7" rx="1.5" />
+            <rect class="pen" x="46" y="62" width="1.8" height="7" rx=".9" />
+          </g>
+          <g class="head">
+            <rect class="skin" x="36" y="40" width="8" height="9" rx="3" />
+            <circle class="skin" cx="40" cy="30" r="13" />
+            <path class="hair" d="M27 29 C26 17 34 13 41 14 C49 14 55 19 54 28 C51 23 46 21 41 22 C36 23 31 25 27 29 Z" />
+            <circle class="hair" cx="29" cy="20" r="4" />
+            <circle class="hair" cx="36" cy="15" r="4.5" />
+            <circle class="hair" cx="45" cy="15" r="4.5" />
+            <circle class="hair" cx="52" cy="21" r="3.5" />
+            <g class="eyes"><circle cx="41" cy="31" r="1.6" /><circle cx="49.5" cy="31" r="1.6" /></g>
+            <path class="eyes-closed" d="M38.5 31.5 q2.5 2 5 0 M47 31.5 q2.5 2 5 0" />
+            <g class="glasses"><circle cx="41" cy="31" r="4.3" /><circle cx="49.5" cy="31" r="4.3" /><path d="M36.7 30 L29 28" /></g>
+            <circle class="cheek" cx="52" cy="35.5" r="2" />
+            <path class="smile" d="M44 37 q3 2.2 6 0" />
+          </g>
+          <g class="arm arm-front">
+            <rect class="coat" x="26" y="52" width="9" height="28" rx="4.5" />
+            <circle class="skin" cx="30.5" cy="80" r="4" />
+            <g class="clipboard">
+              <rect class="board" x="22" y="72" width="16" height="20" rx="2" />
+              <rect class="paper-sheet" x="24.5" y="76" width="11" height="14" />
+              <rect class="clip" x="27" y="70.5" width="6" height="3" rx="1" />
+              <path class="sheet-lines" d="M26.5 80h7 M26.5 83h7 M26.5 86h5" />
+            </g>
+          </g>
+        </svg>
+      </span>
+    </button>
+  </div>
+
+  <!-- ============ Character: the owl ============ -->
+  <div class="character owl" id="owl" data-state="perched">
+    <p class="char-bubble" aria-hidden="true"></p>
+    <span class="char-zzz" aria-hidden="true"><span>z</span><span>z</span><span>Z</span></span>
+    <button class="char-hit" type="button" aria-label="Say hello to Minerva, the owl">
+      <svg class="char-svg" viewBox="0 0 60 64" width="48" height="52" overflow="visible" aria-hidden="true">
+        <g class="wing wing-l"><ellipse class="owl-wing" cx="13" cy="38" rx="7" ry="15" /></g>
+        <g class="wing wing-r"><ellipse class="owl-wing" cx="47" cy="38" rx="7" ry="15" /></g>
+        <path class="owl-body" d="M30 12 C46 12 50 26 49 40 C48 54 40 60 30 60 C20 60 12 54 11 40 C10 26 14 12 30 12 Z" />
+        <path class="owl-tuft" d="M15 18 L13 6 L23 13 Z M45 18 L47 6 L37 13 Z" />
+        <ellipse class="owl-belly" cx="30" cy="44" rx="12" ry="13" />
+        <path class="owl-chevrons" d="M24 40 l3 2.5 3-2.5 3 2.5 3-2.5 M24 46 l3 2.5 3-2.5 3 2.5 3-2.5 M26 52 l2 2 2-2 2 2 2-2" />
+        <g class="owl-face">
+          <circle class="owl-disc" cx="22" cy="26" r="9" />
+          <circle class="owl-disc" cx="38" cy="26" r="9" />
+          <g class="owl-eyes">
+            <circle class="owl-eye-white" cx="22" cy="26" r="6" />
+            <circle class="owl-eye-white" cx="38" cy="26" r="6" />
+            <circle class="owl-pupil" cx="23" cy="26.5" r="3.2" />
+            <circle class="owl-pupil" cx="39" cy="26.5" r="3.2" />
+            <circle class="owl-glint" cx="24.2" cy="25.2" r="1" />
+            <circle class="owl-glint" cx="40.2" cy="25.2" r="1" />
+          </g>
+          <path class="owl-eyes-closed" d="M17 27 q5 3 10 0 M33 27 q5 3 10 0" />
+          <path class="owl-beak" d="M27.5 31 L32.5 31 L30 36 Z" />
+        </g>
+        <path class="owl-feet" d="M24 59 v4 M27 59 v4 M33 59 v4 M36 59 v4" />
+      </svg>
+    </button>
+  </div>
+
+  <p class="visually-hidden" id="app-status" role="status"></p>
+
+  <script src="app.js" defer></script>
 </body>
 </html>

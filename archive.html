@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Archive · Research Journal</title>
+  <meta name="description" content="Every earlier month of the research journal: papers, ideas and daily logs, still linked.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Variable weight ranges (fewer files), loaded without blocking the first paint -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Instrument+Sans:wght@400..600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Instrument+Sans:wght@400..600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Instrument+Sans:wght@400..600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"></noscript>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="archive">
+
+  <!-- ============ Header ============ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#top" aria-label="Research Journal, back to top">
+        <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 3h6" /><path d="M10 3v6.2L4.6 18.4A1.7 1.7 0 0 0 6.1 21h11.8a1.7 1.7 0 0 0 1.5-2.6L14 9.2V3" /><path d="M7.5 15h9" />
+        </svg>
+        <span class="brand-name">Research Journal</span>
+      </a>
+      <nav class="page-nav" aria-label="Pages">
+        <a class="page-link" href="index.html">This month</a>
+        <a class="page-link" href="archive.html" aria-current="page">Archive</a>
+      </nav>
+      <p class="header-date" id="header-date"></p>
+      <button class="sync-btn" id="sync-open" type="button" aria-label="Save and sync">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 7.97"/><path d="M12 12v8M9 15l3-3 3 3"/></svg>
+        <span class="sync-label">Save &amp; sync</span>
+        <span class="sync-badge" id="sync-badge" hidden></span>
+      </button>
+    </div>
+  </header>
+
+  <main class="layout" id="top">
+    <!-- ============ Left: journal cards ============ -->
+    <section class="journal" id="journal" aria-labelledby="journal-heading">
+      <header class="journal-intro">
+        <p class="eyebrow" id="page-eyebrow">Archive</p>
+        <h1 id="journal-heading">Past months</h1>
+        <p class="lede">Every finished month of your journal, kept and still connected. Edit anything, open its connections, or download a month.</p>
+      </header>
+
+      <div class="controls">
+        <div class="filters" id="filters" role="group" aria-label="Filter by entry type"></div>
+        <div class="search-row">
+          <div class="search">
+            <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
+            <label class="visually-hidden" for="search">Search entries</label>
+            <input id="search" type="search" placeholder="Search titles, authors and notes" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="date-filter" role="group" aria-label="Filter by date">
+            <label class="date-field"><span>From</span><input id="date-from" type="date"></label>
+            <label class="date-field"><span>To</span><input id="date-to" type="date"></label>
+            <button class="text-btn" id="date-clear" type="button" hidden>Clear dates</button>
+          </div>
+        </div>
+      </div>
+
+      <nav class="month-nav" id="month-nav" aria-label="Jump to a month"></nav>
+
+      <div class="list-bar">
+        <div class="list-info">
+          <p class="entry-count" id="entry-count"></p>
+        </div>
+        <button class="btn btn-primary" id="new-entry" type="button" aria-expanded="false" aria-controls="composer" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          New entry
+        </button>
+      </div>
+
+      <!-- Entry form -->
+      <section class="composer" id="composer" aria-labelledby="composer-heading" hidden>
+        <form class="entry-form" id="entry-form" data-type="paper" autocomplete="off" novalidate>
+          <div class="composer-top">
+            <h2 id="composer-heading">New entry</h2>
+            <div class="type-switch" role="radiogroup" aria-label="Entry type">
+              <label class="type-option type-paper"><input type="radio" name="type" value="paper" checked><span>Paper</span></label>
+              <label class="type-option type-idea"><input type="radio" name="type" value="idea"><span>Idea</span></label>
+              <label class="type-option type-log"><input type="radio" name="type" value="log"><span>Daily log</span></label>
+            </div>
+          </div>
+
+          <div class="import paper-only">
+            <div class="doi-row">
+              <label class="field doi-field">
+                <span>DOI</span>
+                <input id="f-doi" type="text" placeholder="10.48550/arXiv.1706.03762 or https://doi.org/…" spellcheck="false">
+              </label>
+              <button class="btn btn-soft" id="doi-fetch" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+                Fetch details
+              </button>
+            </div>
+            <details class="bibtex-box" id="bibtex-box">
+              <summary>Or paste BibTeX</summary>
+              <label class="visually-hidden" for="f-bibtex">BibTeX</label>
+              <textarea id="f-bibtex" rows="6" spellcheck="false" placeholder="@article{key,&#10;  title = {…},&#10;  author = {Last, First and …},&#10;  year = {2024}&#10;}"></textarea>
+              <button class="btn btn-soft" id="bibtex-import" type="button">Fill from BibTeX</button>
+            </details>
+            <p class="import-status" id="import-status" role="status"></p>
+          </div>
+
+          <label class="field">
+            <span>Title</span>
+            <input id="f-title" type="text" maxlength="300" required>
+          </label>
+
+          <div class="field-grid paper-only">
+            <label class="field span-2"><span>Authors <small>separate with ;</small></span><input id="f-authors" type="text"></label>
+            <label class="field"><span>Year</span><input id="f-year" type="text" inputmode="numeric" maxlength="4"></label>
+            <label class="field span-3"><span>Venue</span><input id="f-venue" type="text"></label>
+            <label class="field span-4"><span>Link</span><input id="f-url" type="url" placeholder="https://"></label>
+          </div>
+
+          <div class="field-grid idea-only">
+            <label class="field span-2">
+              <span>Status</span>
+              <select id="f-status">
+                <option value="open">Open question</option>
+                <option value="exploring">Exploring</option>
+                <option value="answered">Answered</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="field-grid log-only">
+            <label class="field span-2"><span>Date</span><input id="f-date" type="date"></label>
+          </div>
+
+          <div class="field notes-field">
+            <label for="f-body">Notes <small>Markdown: **bold**, *italic*</small></label>
+            <div class="notes-wrap">
+              <textarea id="f-body" rows="6" placeholder="What stood out? Type [[ or @ to link another entry."
+                aria-autocomplete="list" aria-controls="mention-menu" aria-expanded="false"></textarea>
+              <ul class="mention-menu" id="mention-menu" role="listbox" aria-label="Entries you can link" hidden></ul>
+            </div>
+          </div>
+
+          <div class="link-preview" id="link-preview" aria-live="polite"></div>
+
+          <div class="composer-actions">
+            <button class="btn btn-primary" id="save-entry" type="submit">Save entry</button>
+            <button class="btn btn-ghost" id="cancel-entry" type="button">Cancel</button>
+          </div>
+        </form>
+      </section>
+
+      <div class="entry-list" id="entry-list" aria-label="Archived entries by month"></div>
+
+      <footer class="journal-footer">
+        <p>Saved in this browser. Use <strong>Save &amp; sync</strong> to download or keep it on GitHub.</p>
+        <button class="text-btn" id="reset-journal" type="button" hidden>Reset to the 3 sample entries</button>
+      </footer>
+    </section>
+
+    <!-- ============ Right: connections panel (opened from a card) ============ -->
+    <aside class="map-panel" id="map-panel" aria-labelledby="map-heading" hidden>
+      <div class="map-head">
+        <div class="map-title-row">
+          <h2 id="map-heading" tabindex="-1">Connections</h2>
+          <button class="icon-btn" id="map-close" type="button" aria-label="Close connections">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </div>
+        <nav class="trail" id="map-trail" aria-label="Your path through the entries"></nav>
+        <div class="map-tools">
+          <div class="depth-switch" role="radiogroup" aria-label="How far to look">
+            <label class="depth-option"><input type="radio" name="depth" value="1" checked><span>Direct links</span></label>
+            <label class="depth-option"><input type="radio" name="depth" value="2"><span>2 steps</span></label>
+          </div>
+          <p class="map-summary" id="map-summary" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="map-scroll" id="map-scroll">
+        <div class="map-board" id="map-board">
+          <svg class="map-edges" id="map-edges" aria-hidden="true"></svg>
+          <div class="gpop" id="map-pop"></div>
+        </div>
+      </div>
+      <div class="map-legend" aria-hidden="true">
+        <span><i class="legend-dot legend-paper"></i>Papers, left</span>
+        <span><i class="legend-dot legend-idea"></i>Ideas, upper right</span>
+        <span><i class="legend-dot legend-log"></i>Logs, lower right</span>
+        <span><i class="legend-arrow"></i>Points to the entry being linked</span>
+        <span><i class="legend-dash"></i>Possible connection</span>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ============ Save & sync: downloads, import, GitHub ============ -->
+  <dialog class="sync-dialog" id="sync-dialog" aria-labelledby="sync-title">
+    <form class="sync-form" method="dialog">
+      <header class="sync-head">
+        <h2 id="sync-title">Save &amp; sync</h2>
+        <button class="icon-btn" value="close" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      <section class="sync-section" aria-labelledby="dl-title">
+        <h3 id="dl-title">Download</h3>
+        <p class="sync-help">Keep a copy, or commit the JSON file to your repository yourself.</p>
+        <div class="sync-row">
+          <label class="field sync-month"><span>Month</span><select id="dl-month"></select></label>
+          <button class="btn btn-soft" type="button" data-dl="json">JSON</button>
+          <button class="btn btn-soft" type="button" data-dl="md">Markdown</button>
+        </div>
+        <div class="sync-row">
+          <button class="btn btn-ghost" type="button" data-dl="all">Download everything (JSON)</button>
+          <button class="btn btn-ghost" type="button" id="import-btn">Import a JSON file…</button>
+          <input type="file" id="import-file" accept=".json,application/json" hidden>
+        </div>
+      </section>
+
+      <section class="sync-section" aria-labelledby="gh-title">
+        <h3 id="gh-title">Save to GitHub</h3>
+        <p class="sync-help">
+          Each month is saved as <code>data/2026-10.json</code> (plus <code>data/index.json</code>) in your repository,
+          and this site loads them on any computer. <strong>Your repository is public, so anyone can read these notes.</strong>
+        </p>
+        <p class="sync-help">
+          Use a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a>
+          with access to <strong>only this repository</strong> and <strong>Contents: Read and write</strong>.
+          It is sent only to GitHub. Only remember it on your own computer.
+        </p>
+        <div class="field-grid">
+          <label class="field span-2"><span>Owner</span><input id="gh-owner" type="text" autocomplete="off" spellcheck="false" placeholder="your-username"></label>
+          <label class="field span-2"><span>Repository</span><input id="gh-repo" type="text" autocomplete="off" spellcheck="false" placeholder="research-journal"></label>
+          <label class="field span-2"><span>Branch</span><input id="gh-branch" type="text" autocomplete="off" spellcheck="false" placeholder="main"></label>
+          <label class="field span-2"><span>Folder</span><input id="gh-folder" type="text" autocomplete="off" spellcheck="false" placeholder="data"></label>
+          <label class="field span-4"><span>Token</span><input id="gh-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+          <label class="check span-4"><input id="gh-remember" type="checkbox"> Remember the token on this computer</label>
+        </div>
+        <p class="sync-dirty" id="sync-dirty"></p>
+        <p class="import-status sync-status" id="sync-status" role="status"></p>
+        <div class="sync-row">
+          <button class="btn btn-primary" type="button" id="sync-push">Save changes to GitHub</button>
+          <button class="btn btn-ghost" type="button" id="sync-pull">Load from GitHub</button>
+        </div>
+      </section>
+    </form>
+  </dialog>
+
+  <!-- ============ Character: the scientist ============ -->
+  <div class="character scientist" id="scientist" data-state="walking" data-pace="walk">
+    <p class="char-bubble" aria-hidden="true"></p>
+    <span class="char-zzz" aria-hidden="true"><span>z</span><span>z</span><span>Z</span></span>
+    <button class="char-hit" type="button" aria-label="Say hello to Dr. Pip, the scientist">
+      <span class="char-flip">
+        <svg class="char-svg" viewBox="0 0 80 120" width="60" height="90" overflow="visible" aria-hidden="true">
+          <ellipse class="shadow" cx="40" cy="117" rx="20" ry="2.8" />
+          <g class="arm arm-back">
+            <rect class="coat-shade" x="47" y="52" width="9" height="28" rx="4.5" />
+            <circle class="skin" cx="51.5" cy="80" r="4" />
+          </g>
+          <g class="leg leg-back">
+            <rect class="trousers" x="41" y="88" width="8" height="26" rx="4" />
+            <ellipse class="shoe" cx="47" cy="114.5" rx="7" ry="3.2" />
+          </g>
+          <g class="leg leg-front">
+            <rect class="trousers" x="31" y="88" width="8" height="26" rx="4" />
+            <ellipse class="shoe" cx="37" cy="114.5" rx="7" ry="3.2" />
+          </g>
+          <g class="torso">
+            <path class="coat" d="M26 52 Q40 46 54 52 L58 94 Q40 98 22 94 Z" />
+            <path class="shirt" d="M35 49 L40 60 L45 49 Z" />
+            <path class="coat-line" d="M40 60 L40 95" />
+            <rect class="pocket" x="44" y="66" width="8" height="7" rx="1.5" />
+            <rect class="pen" x="46" y="62" width="1.8" height="7" rx=".9" />
+          </g>
+          <g class="head">
+            <rect class="skin" x="36" y="40" width="8" height="9" rx="3" />
+            <circle class="skin" cx="40" cy="30" r="13" />
+            <path class="hair" d="M27 29 C26 17 34 13 41 14 C49 14 55 19 54 28 C51 23 46 21 41 22 C36 23 31 25 27 29 Z" />
+            <circle class="hair" cx="29" cy="20" r="4" />
+            <circle class="hair" cx="36" cy="15" r="4.5" />
+            <circle class="hair" cx="45" cy="15" r="4.5" />
+            <circle class="hair" cx="52" cy="21" r="3.5" />
+            <g class="eyes"><circle cx="41" cy="31" r="1.6" /><circle cx="49.5" cy="31" r="1.6" /></g>
+            <path class="eyes-closed" d="M38.5 31.5 q2.5 2 5 0 M47 31.5 q2.5 2 5 0" />
+            <g class="glasses"><circle cx="41" cy="31" r="4.3" /><circle cx="49.5" cy="31" r="4.3" /><path d="M36.7 30 L29 28" /></g>
+            <circle class="cheek" cx="52" cy="35.5" r="2" />
+            <path class="smile" d="M44 37 q3 2.2 6 0" />
+          </g>
+          <g class="arm arm-front">
+            <rect class="coat" x="26" y="52" width="9" height="28" rx="4.5" />
+            <circle class="skin" cx="30.5" cy="80" r="4" />
+            <g class="clipboard">
+              <rect class="board" x="22" y="72" width="16" height="20" rx="2" />
+              <rect class="paper-sheet" x="24.5" y="76" width="11" height="14" />
+              <rect class="clip" x="27" y="70.5" width="6" height="3" rx="1" />
+              <path class="sheet-lines" d="M26.5 80h7 M26.5 83h7 M26.5 86h5" />
+            </g>
+          </g>
+        </svg>
+      </span>
+    </button>
+  </div>
+
+  <!-- ============ Character: Kip the spider (archive keeper) ============ -->
+  <svg class="spider-web" id="spider-web" viewBox="0 0 160 160" aria-hidden="true"></svg>
+  <span class="spider-thread" id="spider-thread" aria-hidden="true"></span>
+  <div class="character spider" id="spider" data-state="hanging">
+    <p class="char-bubble" aria-hidden="true"></p>
+    <span class="char-zzz" aria-hidden="true"><span>z</span><span>z</span><span>Z</span></span>
+    <button class="char-hit" type="button" aria-label="Say hello to Kip, the archive spider">
+      <svg class="char-svg spider-svg" viewBox="0 0 60 56" width="48" height="45" overflow="visible" aria-hidden="true">
+        <g class="spider-legs legs-l">
+          <path d="M20 24 Q10 15 5 21" />
+          <path d="M19 29 Q8 25 3 32" />
+          <path d="M19 34 Q9 37 6 45" />
+          <path d="M21 38 Q14 45 13 53" />
+        </g>
+        <g class="spider-legs legs-r">
+          <path d="M40 24 Q50 15 55 21" />
+          <path d="M41 29 Q52 25 57 32" />
+          <path d="M41 34 Q51 37 54 45" />
+          <path d="M39 38 Q46 45 47 53" />
+        </g>
+        <path class="spider-silk" d="M30 0 V17" />
+        <ellipse class="spider-body" cx="30" cy="30" rx="13.5" ry="14" />
+        <path class="spider-mark" d="M30 18.5 l2.6 3.4 -2.6 3.4 -2.6 -3.4z" />
+        <g class="spider-eyes">
+          <circle class="spider-eye" cx="25" cy="31" r="4.6" />
+          <circle class="spider-eye" cx="35" cy="31" r="4.6" />
+          <circle class="spider-pupil" cx="25.8" cy="31.8" r="2.3" />
+          <circle class="spider-pupil" cx="35.8" cy="31.8" r="2.3" />
+          <circle class="spider-glint" cx="26.6" cy="30.6" r=".8" />
+          <circle class="spider-glint" cx="36.6" cy="30.6" r=".8" />
+        </g>
+        <path class="spider-eyes-closed" d="M21.5 32 q3.5 2.5 7 0 M31.5 32 q3.5 2.5 7 0" />
+        <circle class="spider-cheek" cx="20.5" cy="37" r="2" />
+        <circle class="spider-cheek" cx="39.5" cy="37" r="2" />
+        <path class="spider-smile" d="M27 38.5 q3 2.4 6 0" />
+        <path class="spider-fangs" d="M28.6 41.8 v1.8 M31.4 41.8 v1.8" />
+      </svg>
+    </button>
+  </div>
+
+  <p class="visually-hidden" id="app-status" role="status"></p>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
