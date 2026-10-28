@@ -3,31 +3,41 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>library · anotetoself research journal</title>
+<title>Library · anotetoself</title>
 <meta name="description" content="Reading library: papers, books and links with notes, linked to your ideas." />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 L14.8 8.6 L22 9.3 L16.5 14 L18.2 21 L12 17.3 L5.8 21 L7.5 14 L2 9.3 L9.2 8.6Z' fill='%23f5d6a0' stroke='%232b2b2b' stroke-width='1.6'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 8 C9 5.5 13 5.5 16 8.5 C19 5.5 23 5.5 28 8 V26 C23 23.5 19 23.5 16 26.5 C13 23.5 9 23.5 4 26 Z M16 8.5 V26.5' fill='%23dff25b' stroke='%231b1b1b' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Patrick+Hand&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/journal.css" />
 </head>
 <body>
 
-<main class="page" id="page" data-page="library" data-title="READING LIBRARY">
+<main class="wrap" id="page" data-page="library">
+
+  <section class="hero">
+    <div>
+      <span class="eyebrow">Reading library</span>
+      <h1 class="display">A shelf for everything <em class="hl">worth reading</em>.</h1>
+      <p class="lede">Papers, books, videos and links, with your notes beside them and a line back to the ideas they feed.</p>
+    </div>
+    <div class="hero-art small" data-art="reader"></div>
+  </section>
+
   <div class="split">
     <div class="sticky">
-      <section class="card sketch press add-source" aria-labelledby="addTitle">
-        <h2 id="addTitle">add to the shelf 📚</h2>
+      <section class="card add-source" aria-labelledby="addTitle">
+        <h2 id="addTitle">Add to the <em>shelf</em></h2>
         <form id="sourceForm" autocomplete="off">
-          <label><span>title *</span><input class="line-input" id="srcTitle" maxlength="200" required placeholder="paper, book, video, article…" /></label>
-          <label><span>authors</span><input class="line-input" id="srcAuthors" maxlength="200" placeholder="Lastname et al." /></label>
+          <label><span>Title *</span><input class="line-input" id="srcTitle" maxlength="200" required placeholder="Paper, book, video, article…" /></label>
+          <label><span>Authors</span><input class="line-input" id="srcAuthors" maxlength="200" placeholder="Lastname et al." /></label>
           <div class="row">
-            <label><span>year</span><input class="line-input" id="srcYear" maxlength="10" inputmode="numeric" placeholder="2024" /></label>
-            <label><span>tags</span><input class="line-input" id="srcTags" maxlength="120" placeholder="#focus, #sleep" /></label>
+            <label><span>Year</span><input class="line-input" id="srcYear" maxlength="10" inputmode="numeric" placeholder="2024" /></label>
+            <label><span>Tags</span><input class="line-input" id="srcTags" maxlength="120" placeholder="focus, sleep" /></label>
           </div>
-          <label><span>link</span><input class="line-input" id="srcUrl" maxlength="500" placeholder="https://…" /></label>
-          <label><span>for idea</span><select class="select" id="srcIdea" style="width:100%"></select></label>
-          <div style="text-align:right;margin-top:6px"><button type="submit" class="btn sketch press" id="srcBtn">shelve it ★</button></div>
+          <label><span>Link</span><input class="line-input" id="srcUrl" maxlength="500" placeholder="https://…" /></label>
+          <label><span>For idea</span><select class="select" id="srcIdea" style="margin-top:6px"></select></label>
+          <div style="text-align:right;margin-top:4px"><button type="submit" class="btn" id="srcBtn">Shelve it</button></div>
         </form>
       </section>
     </div>
@@ -35,12 +45,12 @@
     <section aria-label="Sources">
       <div class="toolbar">
         <label class="search">
-          <svg width="18" height="18" aria-hidden="true"><use href="#i-search"/></svg>
+          <svg width="16" height="16" aria-hidden="true"><use href="#i-search"/></svg>
           <span class="sr-only">Search the library</span>
-          <input type="search" id="libSearch" placeholder="search titles, authors, notes…" />
+          <input type="search" id="libSearch" placeholder="Search titles, authors, notes…" />
         </label>
       </div>
-      <div class="chips" id="statusChips" style="margin-top:12px" aria-label="Filter by status"></div>
+      <div class="chips" id="statusChips" style="margin-top:14px" aria-label="Filter by status"></div>
       <div class="lib-list" id="libList"></div>
     </section>
   </div>

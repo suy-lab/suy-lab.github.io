@@ -26,8 +26,8 @@
     if (tagFilter && !counts[tagFilter]) tagFilter = null;
     const wrap = $('#tagChips');
     wrap.innerHTML = tags.length
-      ? `<button type="button" class="chip press" data-tag="" aria-pressed="${!tagFilter}">all tags</button>` +
-        tags.map(t => `<button type="button" class="chip press" data-tag="${esc(t)}" aria-pressed="${t === tagFilter}">#${esc(t)} <small>${counts[t]}</small></button>`).join('')
+      ? `<button type="button" class="chip" data-tag="" aria-pressed="${!tagFilter}">all tags</button>` +
+        tags.map(t => `<button type="button" class="chip" data-tag="${esc(t)}" aria-pressed="${t === tagFilter}">#${esc(t)} <small>${counts[t]}</small></button>`).join('')
       : '';
   }
   $('#tagChips').addEventListener('click', e => {
@@ -44,12 +44,12 @@
     const open = i.questions.filter(q => !q.done).length;
     const prev = IDEA_STATUSES[colIndex - 1], next = IDEA_STATUSES[colIndex + 1];
     return `
-      <article class="idea-card sketch press${i.id === justAdded ? ' is-new' : ''}" draggable="true" data-id="${esc(i.id)}" style="--tone:${s.tone}">
+      <article class="idea-card${i.id === justAdded ? ' is-new' : ''}" draggable="true" data-id="${esc(i.id)}" style="--tone:${s.tone}">
         <h3><a href="${J.ideaHref(i.id)}" draggable="false">${esc(i.title)}</a></h3>
         ${i.summary ? `<p>${esc(i.summary)}</p>` : ''}
         ${i.tags.length ? `<div class="tags">${i.tags.map(t => `<span class="tag">#${esc(t)}</span>`).join('')}</div>` : ''}
         <div class="card-meta">
-          <span title="notes · open questions · sources">📝 ${i.notes.length} · ❓ ${open} · 📚 ${i.sourceIds.filter(id => J.sources.get(id)).length}</span>
+          <span>${i.notes.length} notes · ${open} open · ${i.sourceIds.filter(id => J.sources.get(id)).length} sources</span>
           <span>${J.ago(i.updated)}</span>
         </div>
         <div class="move">

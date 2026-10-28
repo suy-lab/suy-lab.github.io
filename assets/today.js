@@ -6,18 +6,19 @@
   const { $, $$, Store, toast, burst, burstFrom, restart, fmt, uid, svgUse, rand } = J;
   const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
+  $('#todayLabel').textContent = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
+
   /* ---------------------------------------------------------
-     Buddy doodle
+     Hero illustration reacts to saves
      --------------------------------------------------------- */
   const Buddy = (() => {
-    const el = $('#buddy');
+    const el = $('#heroArt');
     function cheer() {
-      restart(el, 'jump');
+      J.cheer(el);
       const r = el.getBoundingClientRect();
-      burst(r.left + r.width / 2, r.top + 8, 4, 50);
+      burst(r.left + r.width / 2, r.top + r.height * .3, 6, 70);
     }
     el.addEventListener('click', cheer);
-    el.addEventListener('animationend', e => { if (e.animationName === 'buddyJump') el.classList.remove('jump'); });
     return { cheer };
   })();
 
@@ -53,14 +54,17 @@
       mode = m;
       modeBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === m)));
       $('#moodRow').hidden = m === 'idea';
-      saveBtn.textContent = m === 'idea' ? 'save idea 💡' : 'save note ★';
+      saveBtn.textContent = m === 'idea' ? 'Save idea' : 'Save note';
       textarea.placeholder = m === 'idea'
-        ? 'first line = the idea\nthen anything else: why it matters, a hunch, a question…'
-        : "what's on your mind? ideas, feelings, tiny wins…";
+        ? 'First line is the idea. Then anything else: why it matters, a hunch, a question…'
+        : "What's on your mind?";
     }
     modeBtns.forEach(b => b.addEventListener('click', () => { setMode(b.dataset.mode); textarea.focus(); }));
 
-    textarea.addEventListener('input', () => { count.textContent = textarea.value.length; });
+    textarea.addEventListener('input', () => {
+      count.textContent = textarea.value.length;
+      textarea.classList.toggle('filled', textarea.value.length > 0);
+    });
     textarea.addEventListener('keydown', e => {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); form.requestSubmit(); }
     });
@@ -84,16 +88,18 @@
       if (mode === 'idea') {
         const [first, ...rest] = text.split('\n');
         const idea = J.ideas.add(J.makeIdea({ title: first.trim().slice(0, 120), summary: rest.join('\n').trim() }));
-        renderPulse();
+        renderStats();
         toast('new spark on the board ✦', { label: 'open →', onClick: () => { location.href = J.ideaHref(idea.id); } });
       } else {
         const entry = J.entries.add({ id: uid(), text, mood, ts: J.nowIso() });
         renderRecent(entry.id);
         list.scrollTo({ top: 0, behavior: 'smooth' });
+        renderStats();
         toast(`saved · ${fmt.time.format(new Date(entry.ts))}`);
       }
 
       textarea.value = '';
+      textarea.classList.remove('filled');
       count.textContent = '0';
       mood = '';
       $$('.mood', form).forEach(b => b.setAttribute('aria-pressed', 'false'));
@@ -103,18 +109,19 @@
   })();
 
   /* ---------------------------------------------------------
-     Idea pulse
+     At-a-glance stats
      --------------------------------------------------------- */
-  function renderPulse() {
-    const all = J.ideas.all();
-    $('#pulseRow').innerHTML = J.IDEA_STATUSES.map(s => {
-      const n = all.filter(i => i.status === s.id).length;
-      return `<a class="pulse-stat" href="ideas.html#${s.id}" style="--tone:${s.tone}"><b>${n}</b><span>${s.icon} ${s.label}</span></a>`;
-    }).join('');
+  function renderStats() {
+    const ideas = J.ideas.all();
+    const weekAgo = Date.now() - 7 * 864e5;
+    $('#statSpark').textContent = ideas.filter(i => i.status === 'spark').length;
+    $('#statExploring').textContent = ideas.filter(i => i.status === 'exploring' || i.status === 'testing').length;
+    $('#statWeek').textContent = J.entries.all().filter(e => new Date(e.ts) >= weekAgo).length;
+    $('#statRead').textContent = J.sources.all().filter(s => s.status !== 'read').length;
     const latest = J.ideasByRecent()[0];
-    $('#pulseFoot').innerHTML = latest
-      ? `<span>last touched: <a href="${J.ideaHref(latest.id)}">${J.esc(latest.title)}</a></span><span class="muted">${J.ago(latest.updated)}</span>`
-      : `<span class="muted">no ideas yet — switch the brain dump to 💡 to add one</span>`;
+    $('#statFoot').innerHTML = latest
+      ? `Last touched: <a href="${J.ideaHref(latest.id)}">${J.esc(latest.title)}</a> · ${J.esc(J.ago(latest.updated))}`
+      : 'No ideas yet. Switch the box above to “New idea” to add one.';
   }
 
   /* ---------------------------------------------------------
@@ -353,9 +360,9 @@
       fill.style.width = (100 - (remaining / (state.mins * 60)) * 100) + '%';
     }
     function setLabel() {
-      if (remaining <= 0) btn.textContent = '✓ done!';
-      else if (running) btn.textContent = '❚❚ pause';
-      else btn.textContent = remaining < state.mins * 60 ? '▶ resume' : '▶ start';
+      if (remaining <= 0) btn.textContent = '✓ Done!';
+      else if (running) btn.textContent = '❚❚ Pause';
+      else btn.textContent = remaining < state.mins * 60 ? '▶ Resume' : '▶ Start';
     }
     function setMins(v) {
       if (running) return;
@@ -412,7 +419,7 @@
     const el = $('#mantra');
     let i = Store.get('mantra', 0) % AFFIRMATIONS.length;
     el.textContent = AFFIRMATIONS[i];
-    el.addEventListener('click', () => {
+    $('#mantraNext').addEventListener('click', () => {
       i = (i + 1) % AFFIRMATIONS.length;
       Store.set('mantra', i);
       el.textContent = AFFIRMATIONS[i];
@@ -427,11 +434,11 @@
       Store.set('peps', peps);
       paint();
       burstFrom(btn, 14, 110);
-      Buddy.cheer();
+      J.cheer($('.hello-art'));
     });
     paint();
   })();
 
   renderRecent();
-  renderPulse();
+  renderStats();
 })();

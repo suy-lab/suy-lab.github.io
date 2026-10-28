@@ -20,10 +20,10 @@
     const keys = [...new Set(J.entries.all().map(e => monthKey(new Date(e.ts))))];
     if (month && !keys.includes(month)) month = null;
     $('#monthChips').innerHTML =
-      `<button type="button" class="chip press" data-month="" aria-pressed="${!month}">all</button>` +
+      `<button type="button" class="chip" data-month="" aria-pressed="${!month}">all</button>` +
       keys.map(k => {
         const [y, m] = k.split('-').map(Number);
-        return `<button type="button" class="chip press" data-month="${k}" aria-pressed="${k === month}">${esc(fmt.month.format(new Date(y, m, 1)).toLowerCase())}</button>`;
+        return `<button type="button" class="chip" data-month="${k}" aria-pressed="${k === month}">${esc(fmt.month.format(new Date(y, m, 1)).toLowerCase())}</button>`;
       }).join('');
     $('#filterIdea').innerHTML = J.ideaOptions(ideaFilter, 'all ideas');
     ideaSel.innerHTML = J.ideaOptions(ideaSel.value || preset);

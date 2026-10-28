@@ -49,7 +49,7 @@
   const picker = $('#statusPicker');
   function paintStatus() {
     picker.innerHTML = IDEA_STATUSES.map(s =>
-      `<button type="button" class="status-pill press" data-status="${s.id}" style="--tone:${s.tone}" aria-pressed="${s.id === idea.status}">${s.icon} ${s.label}</button>`).join('');
+      `<button type="button" class="status-pill" data-status="${s.id}" style="--tone:${s.tone}" aria-pressed="${s.id === idea.status}">${s.icon} ${s.label}</button>`).join('');
   }
   picker.addEventListener('click', e => {
     const b = e.target.closest('[data-status]');
@@ -192,7 +192,7 @@
     idea.sourceIds.push(s.id);
     e.target.reset();
     save(); paintSources();
-    toast('added to your library + linked 📚');
+    toast('added to your library and linked');
   });
 
   /* ---------- related log entries ---------- */

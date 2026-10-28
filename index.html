@@ -3,99 +3,86 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>today · anotetoself research journal</title>
-<meta name="description" content="A cozy, hand-drawn research journal. Capture ideas, log progress, and keep your reading close." />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 L14.8 8.6 L22 9.3 L16.5 14 L18.2 21 L12 17.3 L5.8 21 L7.5 14 L2 9.3 L9.2 8.6Z' fill='%23f5d6a0' stroke='%232b2b2b' stroke-width='1.6'/%3E%3C/svg%3E" />
+<title>anotetoself · a research journal for your ideas</title>
+<meta name="description" content="A quiet, hand-drawn research journal. Capture ideas, log progress, and keep your reading close." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 8 C9 5.5 13 5.5 16 8.5 C19 5.5 23 5.5 28 8 V26 C23 23.5 19 23.5 16 26.5 C13 23.5 9 23.5 4 26 Z M16 8.5 V26.5' fill='%23dff25b' stroke='%231b1b1b' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Patrick+Hand&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/journal.css" />
 </head>
 <body>
 
-<main class="page" id="page" data-page="today" data-title="SPACE OF INFINITE POSSIBILITY">
-  <div class="dashboard">
+<main class="wrap" id="page" data-page="today">
 
-    <!-- ============ LEFT COLUMN ============ -->
-    <section class="stack" aria-label="Journal">
-
-      <form class="card sketch press compose" id="composeForm" autocomplete="off">
-        <button type="button" class="buddy" id="buddy" aria-label="Say hi to your journal buddy">
-          <svg viewBox="0 0 64 64" aria-hidden="true">
-            <g class="body-shape">
-              <path class="arm-r" d="M50 34 C56 30 59 26 60 21" fill="none" stroke="#2b2b2b" stroke-width="3" stroke-linecap="round"/>
-              <path d="M14 36 C8 38 5 42 4 46" fill="none" stroke="#2b2b2b" stroke-width="3" stroke-linecap="round"/>
-              <path d="M32 8 C46 8 54 20 53 34 C52 48 44 58 32 58 C20 58 11 49 11 35 C11 20 19 8 32 8Z" fill="#a9bfcf" stroke="#2b2b2b" stroke-width="3"/>
-              <path d="M30 8 C29 4 31 2 34 2" fill="none" stroke="#2b2b2b" stroke-width="2.5" stroke-linecap="round"/>
-              <circle cx="21" cy="40" r="3.5" fill="#ff6b6b" opacity=".45"/>
-              <circle cx="43" cy="40" r="3.5" fill="#ff6b6b" opacity=".45"/>
-            </g>
-            <g class="blink">
-              <ellipse cx="25" cy="32" rx="2.6" ry="3.6" fill="#2b2b2b"/>
-              <ellipse cx="39" cy="32" rx="2.6" ry="3.6" fill="#2b2b2b"/>
-            </g>
-            <path d="M27 41 Q32 46 37 41" fill="none" stroke="#2b2b2b" stroke-width="2.6" stroke-linecap="round"/>
-          </svg>
-        </button>
-
-        <div class="compose-top">
-          <label for="entryText">brain dump ✎</label>
-          <div class="seg" role="group" aria-label="Save as">
-            <button type="button" data-mode="log" aria-pressed="true">📓 log note</button>
-            <button type="button" data-mode="idea" aria-pressed="false">💡 new idea</button>
-          </div>
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div>
+      <span class="eyebrow" id="todayLabel">today</span>
+      <h1 class="display">A quiet notebook for your <em>newest</em> and <em class="hl">wildest</em> ideas.</h1>
+      <form class="capture" id="composeForm" autocomplete="off">
+        <div class="seg" role="group" aria-label="Save as">
+          <button type="button" data-mode="log" aria-pressed="true">Log a note</button>
+          <button type="button" data-mode="idea" aria-pressed="false">New idea</button>
         </div>
-        <textarea id="entryText" class="paper-input" maxlength="2000" placeholder="what's on your mind? ideas, feelings, tiny wins…"></textarea>
-
+        <div class="capture-row">
+          <label for="entryText" class="sr-only">What's on your mind?</label>
+          <textarea id="entryText" class="textarea" maxlength="2000" placeholder="What's on your mind?"></textarea>
+          <button type="submit" class="btn" id="saveBtn">Save note</button>
+        </div>
         <div class="moods" id="moodRow" role="group" aria-label="Mood (optional)">
-          <span class="lbl">mood:</span>
-          <button type="button" class="mood press" data-mood="🙂" aria-pressed="false" aria-label="good">🙂</button>
-          <button type="button" class="mood press" data-mood="😌" aria-pressed="false" aria-label="calm">😌</button>
-          <button type="button" class="mood press" data-mood="😵‍💫" aria-pressed="false" aria-label="overwhelmed">😵‍💫</button>
-          <button type="button" class="mood press" data-mood="😴" aria-pressed="false" aria-label="tired">😴</button>
-          <button type="button" class="mood press" data-mood="🔥" aria-pressed="false" aria-label="motivated">🔥</button>
+          <span class="lbl">Mood</span>
+          <button type="button" class="mood" data-mood="🙂" aria-pressed="false" aria-label="good">🙂</button>
+          <button type="button" class="mood" data-mood="😌" aria-pressed="false" aria-label="calm">😌</button>
+          <button type="button" class="mood" data-mood="😵‍💫" aria-pressed="false" aria-label="overwhelmed">😵‍💫</button>
+          <button type="button" class="mood" data-mood="😴" aria-pressed="false" aria-label="tired">😴</button>
+          <button type="button" class="mood" data-mood="🔥" aria-pressed="false" aria-label="motivated">🔥</button>
         </div>
-
-        <div class="compose-foot">
-          <span class="hint"><span id="charCount">0</span>/2000 · <kbd>ctrl</kbd> + <kbd>enter</kbd> to save</span>
-          <button type="submit" class="btn sketch press" id="saveBtn">save note ★</button>
-        </div>
+        <p class="fine"><span id="charCount">0</span>/2000 · ctrl + enter to save · stays in this browser</p>
       </form>
+    </div>
+    <div class="hero-art" id="heroArt" data-art="desk"></div>
+  </section>
 
-      <article class="card sketch press feed" aria-labelledby="feedTitle">
-        <div class="card-head">
-          <h2 id="feedTitle">where i'm at</h2>
-          <a class="linkish" href="log.html">full log →</a>
-        </div>
-        <ul class="timeline scroll" id="timeline" aria-live="polite"></ul>
-      </article>
+  <!-- ============ AT A GLANCE ============ -->
+  <section class="section" aria-labelledby="glanceTitle">
+    <h2 class="section-title" id="glanceTitle">Everything you're <em>chasing</em>, at a glance.</h2>
+    <div class="features">
+      <a class="feature" href="ideas.html#spark">
+        <div class="spot" data-art="bulb"></div>
+        <div class="num" id="statSpark">0</div>
+        <h3>Fresh sparks</h3>
+        <p>New ideas waiting for a first look. Catch them before they fade.</p>
+      </a>
+      <a class="feature" href="ideas.html#exploring">
+        <div class="spot" data-art="magnifier"></div>
+        <div class="num" id="statExploring">0</div>
+        <h3>Being explored</h3>
+        <p>Ideas you're digging into or testing right now.</p>
+      </a>
+      <a class="feature" href="log.html">
+        <div class="spot" data-art="plane"></div>
+        <div class="num" id="statWeek">0</div>
+        <h3>Logged this week</h3>
+        <p>Notes from the last seven days: what you tried, read and noticed.</p>
+      </a>
+      <a class="feature" href="library.html">
+        <div class="spot" data-art="book"></div>
+        <div class="num" id="statRead">0</div>
+        <h3>On the reading list</h3>
+        <p>Papers, books and links still waiting on your shelf.</p>
+      </a>
+    </div>
+    <p class="features-foot" id="statFoot"></p>
+  </section>
 
-      <article class="card sketch press needs" aria-labelledby="needsTitle">
-        <h2 id="needsTitle">what i need</h2>
-        <ul class="need-list" id="needList"></ul>
-        <form class="inline-form" id="needForm" autocomplete="off">
-          <label for="needInput" class="sr-only">Add a need</label>
-          <input id="needInput" class="line-input" maxlength="160" placeholder="+ add something you need…" />
-          <button type="submit" class="btn white sketch press">add</button>
-        </form>
-      </article>
-    </section>
-
-    <!-- ============ RIGHT COLUMN ============ -->
-    <aside class="widgets" aria-label="Widgets">
-
-      <article class="card sketch press pulse span-2" aria-labelledby="pulseTitle">
-        <div class="card-head">
-          <h2 id="pulseTitle">idea pulse 💡</h2>
-          <a class="linkish" href="ideas.html">open board →</a>
-        </div>
-        <div class="pulse-row" id="pulseRow"></div>
-        <div class="pulse-foot" id="pulseFoot"></div>
-      </article>
-
-      <article class="card sketch press goal" aria-label="Daily focus goal">
-        <div class="goal-text">
-          today, i will spend
+  <!-- ============ FOCUS BAND ============ -->
+  <section class="section">
+    <div class="band" aria-label="Daily focus">
+      <div>
+        <h2>Be the <em>first</em> to follow your own curiosity.</h2>
+        <div class="goal-line">
+          Today, I will spend
           <span class="stepper">
             <button type="button" id="minDown" aria-label="Fewer minutes">−</button>
             <output id="minutes" aria-live="polite">30</output>
@@ -106,81 +93,87 @@
           <input class="line-input" id="goalTask" maxlength="40" placeholder="my research" />
         </div>
         <div class="timer-row">
-          <button type="button" class="btn navy sketch press" id="timerBtn">▶ start</button>
+          <button type="button" class="btn" id="timerBtn">▶ Start</button>
           <div class="progress" aria-hidden="true"><i id="timerFill"></i></div>
           <span class="timer-time" id="timerTime">30:00</span>
         </div>
-      </article>
-
-      <article class="card sketch press profile" aria-label="Profile">
-        <div class="profile-top">
-          <div class="avatar" aria-hidden="true">
-            <svg viewBox="0 0 100 100">
-              <g class="head">
-                <path d="M20 62 C12 32 34 14 54 16 C78 18 90 38 82 62 C80 72 74 78 70 80 L30 80 C26 76 22 70 20 62Z" fill="#a9bfcf" stroke="#2b2b2b" stroke-width="3"/>
-                <circle cx="74" cy="17" r="10" fill="#a9bfcf" stroke="#2b2b2b" stroke-width="3"/>
-                <ellipse cx="50" cy="54" rx="21" ry="23" fill="#fbe3c8" stroke="#2b2b2b" stroke-width="3"/>
-                <path d="M28 50 C32 30 58 26 72 44 C62 40 50 41 40 48 C36 46 32 47 28 50Z" fill="#a9bfcf" stroke="#2b2b2b" stroke-width="3" stroke-linejoin="round"/>
-                <circle cx="41" cy="57" r="7.5" fill="#fff" fill-opacity=".5" stroke="#2b2b2b" stroke-width="2.6"/>
-                <circle cx="60" cy="57" r="7.5" fill="#fff" fill-opacity=".5" stroke="#2b2b2b" stroke-width="2.6"/>
-                <path d="M48.5 57 L52.5 57" stroke="#2b2b2b" stroke-width="2.6"/>
-                <g class="blink"><circle cx="41" cy="58" r="2" fill="#2b2b2b"/><circle cx="60" cy="58" r="2" fill="#2b2b2b"/></g>
-                <circle cx="35" cy="67" r="3.5" fill="#ff6b6b" opacity=".35"/>
-                <circle cx="66" cy="67" r="3.5" fill="#ff6b6b" opacity=".35"/>
-                <path d="M45 69 Q51 74 56 69" fill="none" stroke="#2b2b2b" stroke-width="2.6" stroke-linecap="round"/>
-              </g>
-              <path d="M24 102 C26 86 38 79 50 79 C62 79 74 86 76 102Z" fill="#2f4a5f" stroke="#2b2b2b" stroke-width="3"/>
-            </svg>
-          </div>
-          <div>
-            <div class="name">Myself</div>
-            <div class="handle">@anotetoself</div>
-          </div>
+        <div class="reward-row">
+          <label for="rewardInput">Then I'll reward myself with</label>
+          <input class="input" type="text" id="rewardInput" maxlength="40" placeholder="a walk at the beach" />
+          <label class="earned"><input type="checkbox" id="earned" /> earned</label>
         </div>
-        <button type="button" class="mantra" id="mantra" title="tap for another affirmation">I am on the right path.</button>
-        <div class="dashes" aria-hidden="true"><i></i><i></i></div>
-      </article>
-
-      <article class="card sketch press reward" aria-label="Reward">
-        <h2>i will reward myself with:</h2>
-        <label for="rewardInput" class="sr-only">Reward</label>
-        <input type="text" id="rewardInput" maxlength="40" placeholder="Walk at the beach" />
-        <label class="earned"><input type="checkbox" id="earned" /> reward earned!</label>
-      </article>
-
-      <div class="gotthis-wrap">
-        <span class="blob" style="width:34px;height:34px;top:14px;left:18%"></span>
-        <span class="blob" style="width:26px;height:26px;bottom:26px;right:16%;background:var(--slate-light)"></span>
-        <span class="doodle" style="--size:28px; top:6px; right:14%; color:var(--slate)"><svg aria-hidden="true"><use href="#i-swirl"/></svg></span>
-        <span class="doodle" style="--size:22px; bottom:22px; left:14%; color:var(--yellow); --delay:-1.2s"><svg aria-hidden="true"><use href="#i-sparkle"/></svg></span>
-        <button type="button" class="gotthis sketch press" id="gotThis">I GOT THIS.</button>
-        <span class="pep-count" id="pepCount"></span>
       </div>
+      <div class="band-art" data-art="writer"></div>
+    </div>
+  </section>
 
-      <article class="card sketch press player span-2" id="player" aria-label="Lo-fi player">
-        <div class="cassette" aria-hidden="true">
-          <span class="reel l"></span><span class="reel r"></span>
-          <span class="cassette-label">side A · lo-fi</span>
+  <!-- ============ LOG + NEEDS ============ -->
+  <section class="section two-col">
+    <article class="card" aria-labelledby="feedTitle">
+      <div class="card-head">
+        <h2 id="feedTitle">Where I'm <em>at</em></h2>
+        <a class="linkish" href="log.html">Full log →</a>
+      </div>
+      <ul class="timeline scroll" id="timeline" aria-live="polite"></ul>
+    </article>
+
+    <article class="card" aria-labelledby="needsTitle">
+      <h2 id="needsTitle">What I <em>need</em></h2>
+      <ul class="need-list" id="needList"></ul>
+      <form class="inline-form" id="needForm" autocomplete="off">
+        <label for="needInput" class="sr-only">Add a need</label>
+        <input id="needInput" class="line-input" maxlength="160" placeholder="Add something you need…" />
+        <button type="submit" class="btn-outline small">Add</button>
+      </form>
+    </article>
+  </section>
+
+  <!-- ============ SAY HELLO / MANTRA ============ -->
+  <section class="section">
+    <div class="hello">
+      <div class="hello-art" data-art="wave"></div>
+      <div>
+        <span class="eyebrow">Today's mantra</span>
+        <p class="mantra" id="mantra" aria-live="polite">I am on the right path.</p>
+        <p>A small reminder for the days when the research feels slow. Tap for another, or give yourself a pep talk.</p>
+        <div class="hello-actions">
+          <button type="button" class="btn-outline" id="mantraNext">Another one</button>
+          <button type="button" class="btn" id="gotThis">I got this.</button>
+          <span class="pep-count" id="pepCount"></span>
         </div>
-        <div style="min-width:0">
-          <div class="track-row">
-            <div style="min-width:0">
-              <div class="track-title" id="trackTitle">—</div>
-              <div class="track-artist" id="trackArtist">—</div>
-            </div>
-            <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-          </div>
-          <div class="seek" id="seek" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="seekFill"></i></div>
-          <div class="times"><span id="tCur">0:00</span><span id="tDur">0:00</span></div>
-        </div>
-        <div class="controls">
-          <button type="button" class="ctrl sketch press" id="prevBtn" aria-label="Previous track"><svg aria-hidden="true"><use href="#i-prev"/></svg></button>
-          <button type="button" class="ctrl big sketch press" id="playBtn" aria-label="Play"><svg aria-hidden="true"><use href="#i-play"/></svg></button>
-          <button type="button" class="ctrl sketch press" id="nextBtn" aria-label="Next track"><svg aria-hidden="true"><use href="#i-next"/></svg></button>
-        </div>
-      </article>
-    </aside>
-  </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PLAYER ============ -->
+  <section class="section">
+    <article class="card player" id="player" aria-label="Focus tapes">
+      <div class="cassette" aria-hidden="true"><span class="reel l"></span><span class="reel r"></span></div>
+      <div style="min-width:0">
+        <span class="eyebrow" style="margin-bottom:4px">Focus tapes <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span></span>
+        <div class="track-title" id="trackTitle">—</div>
+        <div class="track-artist" id="trackArtist">—</div>
+        <div class="seek" id="seek" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="seekFill"></i></div>
+        <div class="times"><span id="tCur">0:00</span><span id="tDur">0:00</span></div>
+      </div>
+      <div class="controls">
+        <button type="button" class="ctrl" id="prevBtn" aria-label="Previous track"><svg aria-hidden="true"><use href="#i-prev"/></svg></button>
+        <button type="button" class="ctrl big" id="playBtn" aria-label="Play"><svg aria-hidden="true"><use href="#i-play"/></svg></button>
+        <button type="button" class="ctrl" id="nextBtn" aria-label="Next track"><svg aria-hidden="true"><use href="#i-next"/></svg></button>
+      </div>
+    </article>
+  </section>
+
+  <!-- ============ BACKUP CTA ============ -->
+  <section class="cta">
+    <div class="ghost" data-art="ghost" data-ghost></div>
+    <h2>Keep your research <em>safe</em>.</h2>
+    <p>Everything you write lives only in this browser. Download a backup now and then so nothing gets lost.</p>
+    <div class="cta-actions">
+      <button type="button" class="btn" data-action="export">Download backup</button>
+      <button type="button" class="btn-outline" data-action="import">Restore</button>
+    </div>
+  </section>
 </main>
 
 <script src="assets/core.js"></script>
