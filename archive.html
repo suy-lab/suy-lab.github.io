@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Security: only this site's own scripts may run, and data may only go to GitHub and the DOI services. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.github.com https://doi.org https://api.crossref.org https://data.crosscite.org https://api.datacite.org https://data.medra.org https://data.jalc.org; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+  <meta name="referrer" content="no-referrer">
   <title>Archive · Research Journal</title>
   <meta name="description" content="Every earlier month of the research journal: papers, ideas and daily logs, still linked.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,11 +14,25 @@
   <link rel="preload" as="font" type="font/woff2" href="fonts/JetBrainsMono-Regular.woff2" crossorigin>
   <!-- Titles: Newsreader (variable weights), loaded without blocking the first paint -->
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;display=swap" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;display=swap" media="print" data-async-style>
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;display=swap"></noscript>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body data-page="archive">
+
+  <!-- ============ Lock screen (shown only when the passcode lock is on) ============ -->
+  <div class="lock-screen" id="lock-screen" hidden>
+    <form class="lock-card" id="lock-form" autocomplete="off">
+      <svg class="lock-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /><circle cx="12" cy="15.5" r="1.4" /></svg>
+      <h1 class="lock-title">Journal locked</h1>
+      <p class="lock-help">Enter your passcode to open your research journal.</p>
+      <label class="field"><span>Passcode</span><input id="lock-input" type="password" autocomplete="current-password"></label>
+      <button class="btn btn-primary" type="submit" id="lock-submit">Unlock</button>
+      <p class="import-status" id="lock-error" role="alert"></p>
+      <button class="text-btn" type="button" id="lock-forgot">Forgot it? Reset this browser</button>
+    </form>
+  </div>
+
 
   <!-- ============ Header ============ -->
   <header class="site-header">
@@ -213,8 +230,8 @@
           and load on any device you connect. The site stays public; only a browser with your token can see your entries.
         </p>
         <ol class="sync-steps">
-          <li>On GitHub, <a href="https://github.com/new" target="_blank" rel="noopener">create a <strong>private</strong> repository</a> named <code>research-journal-data</code>. It can stay empty.</li>
-          <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a fine-grained token</a> with access to <strong>only that repository</strong> and <strong>Contents: Read and write</strong>.</li>
+          <li>On GitHub, <a href="https://github.com/new" target="_blank" rel="noopener noreferrer">create a <strong>private</strong> repository</a> named <code>research-journal-data</code>. It can stay empty.</li>
+          <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">Create a fine-grained token</a> with access to <strong>only that repository</strong> and <strong>Contents: Read and write</strong>.</li>
           <li>Paste it below and press <strong>Connect</strong>. You only do this once per browser.</li>
         </ol>
         <div class="field-grid">
@@ -235,6 +252,37 @@
           <button class="btn btn-primary" type="button" id="sync-connect">Connect</button>
           <button class="btn btn-ghost" type="button" id="sync-disconnect" hidden>Disconnect</button>
         </div>
+      </section>
+
+      <section class="sync-section" aria-labelledby="privacy-title">
+        <h3 id="privacy-title">Privacy on this device</h3>
+        <p class="sync-help">
+          Lock the journal with a passcode. Your entries and GitHub token are then stored <strong>encrypted</strong> (AES-256) in this browser,
+          and the journal asks for the passcode when you open it, or after 15 minutes away.
+        </p>
+        <div id="lock-setup">
+          <div class="field-grid">
+            <label class="field span-2"><span>New passcode</span><input id="lock-pass" type="password" autocomplete="new-password"></label>
+            <label class="field span-2"><span>Repeat it</span><input id="lock-pass2" type="password" autocomplete="new-password"></label>
+          </div>
+          <div class="sync-row"><button class="btn btn-primary" type="button" id="lock-enable">Turn on passcode lock</button></div>
+        </div>
+        <div class="sync-row" id="lock-active" hidden>
+          <button class="btn btn-primary" type="button" id="lock-now">Lock now</button>
+          <button class="btn btn-ghost" type="button" id="lock-disable">Turn off passcode lock</button>
+        </div>
+        <p class="import-status" id="lock-status" role="status"></p>
+        <div class="sync-row"><button class="text-btn danger" type="button" id="wipe-device">Remove my data from this browser</button></div>
+      </section>
+
+      <section class="sync-section" aria-labelledby="motion-title">
+        <h3 id="motion-title">Animations</h3>
+        <div class="depth-switch motion-switch" role="radiogroup" aria-label="Animations">
+          <label class="depth-option"><input type="radio" name="motion" value="auto"><span>Match device</span></label>
+          <label class="depth-option"><input type="radio" name="motion" value="full"><span>Always on</span></label>
+          <label class="depth-option"><input type="radio" name="motion" value="reduced"><span>Reduced</span></label>
+        </div>
+        <p class="sync-help" id="motion-note"></p>
       </section>
 
       <section class="sync-section" aria-labelledby="dl-title">

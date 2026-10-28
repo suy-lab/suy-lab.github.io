@@ -1321,8 +1321,6 @@ input::placeholder, textarea::placeholder { color: #6B6862; opacity: 1; }
 @media (max-width: 959px) {
   /* 2.3 the full-screen panel owns scrolling */
   body.map-open { overflow: hidden; }
-  /* 2.4 the scientist never blocks taps on small screens */
-  .scientist .char-hit { pointer-events: none; }
   .scientist { transition: opacity .3s; }
   body.map-open .scientist { opacity: 0; }
 }
@@ -1436,6 +1434,50 @@ input::placeholder, textarea::placeholder { color: #6B6862; opacity: 1; }
 .spider[data-state="dangling"] .legs-r { animation: scuttle-r .09s ease-in-out infinite alternate; }
 .spider[data-state="dangling"] .char-svg { animation: dangle .9s ease-in-out infinite; }
 
+/* ---------- 12. Lock screen, motion choice, touch ---------- */
+.lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: var(--bg);
+}
+body.is-locked > :not(.lock-screen):not(script) { visibility: hidden; }
+.lock-card {
+  width: min(380px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: 28px 24px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+}
+.lock-card .field { text-align: left; }
+.lock-icon { justify-self: center; width: 40px; height: 40px; fill: none; stroke: var(--paper-ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.lock-title { font-family: var(--serif); font-size: 28px; font-weight: 600; }
+.lock-help { color: var(--muted); font-size: 14px; }
+.lock-card .import-status:empty { display: none; }
+#lock-setup { display: grid; gap: 10px; }
+.motion-switch { justify-self: start; flex-wrap: wrap; }
+
+/* characters are touchable on phones too: no long-press menus or text selection */
+.char-hit { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+@media (max-width: 959px) {
+  .scientist .char-hit { pointer-events: auto; }
+  .journal { padding-bottom: 130px; } /* room to scroll the last card above Dr. Pip */
+}
+
+/* Less motion when the device asks for it (unless “Always on” is chosen), or when “Reduced” is chosen */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  html:not([data-motion="full"]) *, html:not([data-motion="full"]) *::before, html:not([data-motion="full"]) *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important;
+  }
+}
+html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-motion="reduced"] *::after {
+  animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important;
 }

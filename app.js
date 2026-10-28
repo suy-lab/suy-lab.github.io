@@ -9,6 +9,12 @@
 'use strict';
 
 (() => {
+  // Switch the title font's stylesheet on once loaded (done here, not in an inline onload, so the CSP can forbid inline scripts).
+  document.querySelectorAll('link[data-async-style]').forEach((link) => {
+    if (link.sheet) link.media = 'all';
+    else link.addEventListener('load', () => { link.media = 'all'; });
+  });
+
   /* ---------- 1. Constants & sample entries ---------- */
   const STORAGE_KEY = 'research-journal:v1';
   const SLEEP_AFTER_MS = 60000;
@@ -187,14 +193,16 @@
       && !Number.isNaN(new Date(e.created).getTime());
   }
 
+  function entriesFromData(data) {
+    const entries = data && Array.isArray(data.entries) ? data.entries.filter(isValidEntry) : [];
+    if (entries.length || (data && data.emptyOnPurpose)) return entries.map((e) => ({ ...e, body: e.body || '' }));
+    return sampleEntries();
+  }
+
   function loadEntries() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const data = JSON.parse(raw);
-        const entries = Array.isArray(data.entries) ? data.entries.filter(isValidEntry) : [];
-        if (entries.length || data.emptyOnPurpose) return entries.map((e) => ({ ...e, body: e.body || '' }));
-      }
+      if (raw) return entriesFromData(JSON.parse(raw));
     } catch (err) { /* storage blocked or corrupt: start from the samples */ }
     return sampleEntries();
   }
@@ -216,18 +224,184 @@
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (err) { /* storage blocked */ }
   }
 
-  /** Save to this browser; unless told otherwise, also queue an automatic save to GitHub. */
+  function journalData() {
+    return {
+      version: 2,
+      savedAt: new Date().toISOString(),
+      emptyOnPurpose: state.entries.length === 0,
+      entries: state.entries,
+      deleted: state.deleted,
+    };
+  }
+
+  /** Save to this browser (encrypted when the passcode lock is on); unless told otherwise, also queue a save to GitHub. */
   function persistNow({ sync: queueSync = true } = {}) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        version: 2,
-        savedAt: new Date().toISOString(),
-        emptyOnPurpose: state.entries.length === 0,
-        entries: state.entries,
-        deleted: state.deleted,
-      }));
-    } catch (err) { /* storage full or blocked: keep working in memory */ }
+    if (vaultOpen()) {
+      writeVault();
+    } else {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(journalData()));
+      } catch (err) { /* storage full or blocked: keep working in memory */ }
+    }
     if (queueSync) scheduleAutoSave();
+  }
+
+  /* ---------- 3b. Device privacy: optional passcode lock ----------
+     With the lock on, entries and the GitHub token are stored only as AES-256-GCM ciphertext. The key is
+     derived from your passcode (PBKDF2-SHA256) and exists only in memory while the journal is unlocked. */
+  const VAULT_KEY = 'research-journal:vault';
+  const PBKDF2_ITERATIONS = 400000;
+  const LOCK_AFTER_MS = 15 * 60 * 1000;
+  const vault = { key: null, salt: null, token: '', writing: Promise.resolve() };
+
+  function vaultEnabled() {
+    try { return Boolean(localStorage.getItem(VAULT_KEY)); } catch (err) { return false; }
+  }
+
+  const vaultOpen = () => Boolean(vault.key);
+
+  function bytesToB64(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+
+  function b64ToBytes(s) {
+    const bin = atob(s);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  async function deriveKey(passcode, salt, iterations = PBKDF2_ITERATIONS) {
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(passcode), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+      base,
+      { name: 'AES-GCM', length: 256 },
+      false, // the key can be used but never read back out
+      ['encrypt', 'decrypt'],
+    );
+  }
+
+  async function sealVault() {
+    if (!vault.key) return; // locked or turned off meanwhile: never write
+    const iv = crypto.getRandomValues(new Uint8Array(12)); // fresh for every save
+    const plain = new TextEncoder().encode(JSON.stringify({ ...journalData(), token: vault.token }));
+    const sealed = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, vault.key, plain));
+    localStorage.setItem(VAULT_KEY, JSON.stringify({
+      v: 1, kdf: 'PBKDF2-SHA256', iterations: PBKDF2_ITERATIONS,
+      salt: bytesToB64(vault.salt), iv: bytesToB64(iv), data: bytesToB64(sealed),
+    }));
+  }
+
+  function writeVault() {
+    vault.writing = vault.writing.then(sealVault).catch(() => { /* storage full: the next save retries */ });
+  }
+
+  /** Decrypt with a passcode (or the key already in memory). Throws if the passcode is wrong. */
+  async function openVault(passcode) {
+    const stored = JSON.parse(localStorage.getItem(VAULT_KEY));
+    const salt = b64ToBytes(stored.salt);
+    const key = passcode === undefined ? vault.key : await deriveKey(passcode, salt, stored.iterations || PBKDF2_ITERATIONS);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(stored.iv) }, key, b64ToBytes(stored.data));
+    vault.key = key;
+    vault.salt = salt;
+    const data = JSON.parse(new TextDecoder().decode(plain));
+    vault.token = data.token || '';
+    return data;
+  }
+
+  async function enableLock(passcode) {
+    const token = syncConfig().token; // read before the vault takes over
+    vault.salt = crypto.getRandomValues(new Uint8Array(16));
+    vault.key = await deriveKey(passcode, vault.salt);
+    vault.token = token;
+    await sealVault();
+    // Only remove the readable copies once the encrypted one is safely stored.
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+  }
+
+  async function disableLock() {
+    await vault.writing;
+    const token = vault.token;
+    vault.key = null;
+    vault.salt = null;
+    vault.token = '';
+    persistNow({ sync: false }); // writes the readable copy again
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    localStorage.removeItem(VAULT_KEY);
+  }
+
+  async function lockNow() {
+    await vault.writing;
+    window.location.reload(); // the key only lived in memory, so the page comes back locked
+  }
+
+  /** Remove everything this site stored in this browser. */
+  function clearAllLocal() {
+    [localStorage, sessionStorage].forEach((store) => {
+      try {
+        Object.keys(store).filter((k) => k.startsWith('research-journal:')).forEach((k) => store.removeItem(k));
+      } catch (err) { /* storage blocked */ }
+    });
+  }
+
+  /** Show the lock screen until the right passcode is entered; resolves with the decrypted journal. */
+  function unlockScreen() {
+    const screen = $('#lock-screen');
+    const form = $('#lock-form');
+    const input = $('#lock-input');
+    const error = $('#lock-error');
+    const submit = $('#lock-submit');
+    document.body.classList.add('is-locked');
+    screen.hidden = false;
+    input.focus();
+    let failures = 0;
+    return new Promise((resolve) => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!input.value) return;
+        submit.disabled = true;
+        error.dataset.tone = 'busy';
+        error.textContent = 'Unlocking…';
+        try {
+          const data = await openVault(input.value);
+          input.value = '';
+          screen.hidden = true;
+          document.body.classList.remove('is-locked');
+          resolve(data);
+        } catch (err) {
+          failures++;
+          const wait = failures >= 3 ? Math.min(30, 2 ** (failures - 2)) : 0; // slow down repeated guesses
+          error.dataset.tone = 'error';
+          error.textContent = wait ? `That passcode didn’t work. Try again in ${wait} seconds.` : 'That passcode didn’t work.';
+          input.select();
+          setTimeout(() => { submit.disabled = false; }, wait * 1000);
+        }
+      });
+      $('#lock-forgot').addEventListener('click', () => {
+        if (!window.confirm('Reset this browser? Your entries and token stored here will be erased. Anything already saved to your private GitHub repository can be brought back by connecting again with a token.')) return;
+        clearAllLocal();
+        window.location.reload();
+      });
+    });
+  }
+
+  /** With the lock on, lock again after 15 minutes away or idle. */
+  function startAutoLock() {
+    let hiddenAt = 0;
+    let lastUse = Date.now();
+    ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach((t) => {
+      window.addEventListener(t, () => { lastUse = Date.now(); }, { passive: true });
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+      else if (vaultOpen() && hiddenAt && Date.now() - hiddenAt > LOCK_AFTER_MS) lockNow();
+    });
+    setInterval(() => { if (vaultOpen() && Date.now() - lastUse > LOCK_AFTER_MS) lockNow(); }, 30000);
   }
 
   /* ---------- DOM references ---------- */
@@ -1441,7 +1615,7 @@
     state.mapMoving = true;
     el.board.classList.add('is-moving');
     const t0 = performance.now();
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduce = motionReduced();
     const frame = (now) => {
       const p = reduce ? 1 : Math.min(1, (now - t0) / MOVE_MS);
       const k = 1 - (1 - p) ** 3; // ease-out cubic
@@ -1851,7 +2025,7 @@
     let token = '';
     try {
       saved = JSON.parse(localStorage.getItem(SYNC_KEY)) || {};
-      token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || '';
+      token = vaultOpen() ? vault.token : (localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || '');
     } catch (err) { /* storage blocked */ }
     return {
       owner: saved.owner || siteOwner(),
@@ -1869,7 +2043,12 @@
       localStorage.setItem(SYNC_KEY, JSON.stringify(rest));
       localStorage.removeItem(TOKEN_KEY);
       sessionStorage.removeItem(TOKEN_KEY);
-      if (token) (cfg.remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, token);
+      if (vaultOpen()) {
+        vault.token = token || ''; // encrypted with the rest of the journal
+        writeVault();
+      } else if (token) {
+        (cfg.remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, token);
+      }
     } catch (err) { /* storage blocked */ }
   }
 
@@ -2203,7 +2382,85 @@
     setConnectStatus('Disconnected. Your entries stay in this browser; the copy on GitHub is untouched.', 'ok');
   }
 
+  /* Privacy and animation settings in the Settings dialog */
+  function refreshPrivacyUI() {
+    const locked = vaultOpen();
+    $('#lock-setup').hidden = locked;
+    $('#lock-active').hidden = !locked;
+    el.ghRemember.closest('label').hidden = locked; // with the lock on, the token is always kept, encrypted
+  }
+
+  function setLockStatus(text, tone = 'ok') {
+    const s = $('#lock-status');
+    s.textContent = text;
+    s.dataset.tone = tone;
+  }
+
+  function applyMotionPref() {
+    document.documentElement.dataset.motion = loadPrefs().motion || 'auto';
+  }
+
+  function refreshMotionUI() {
+    const pref = loadPrefs().motion || 'auto';
+    $$('input[name="motion"]').forEach((r) => { r.checked = r.value === pref; });
+    const deviceAsks = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $('#motion-note').textContent = deviceAsks
+      ? 'This device is asking for less motion (often because of battery saver), so with “Match device” the characters stay still. Choose “Always on” to keep them moving.'
+      : 'The characters walk, fly and react, and the map and cards animate.';
+  }
+
+  function bindPrivacyEvents() {
+    $('#lock-enable').addEventListener('click', async () => {
+      const a = $('#lock-pass').value;
+      const b = $('#lock-pass2').value;
+      if (a.length < 6) { setLockStatus('Use at least 6 characters.', 'error'); return; }
+      if (a !== b) { setLockStatus('The two passcodes don’t match.', 'error'); return; }
+      if (!window.isSecureContext || !window.crypto || !crypto.subtle) { setLockStatus('This browser can’t encrypt here. Open the site over https.', 'error'); return; }
+      setLockStatus('Encrypting your journal…', 'busy');
+      try {
+        await enableLock(a);
+        $('#lock-pass').value = '';
+        $('#lock-pass2').value = '';
+        refreshPrivacyUI();
+        setLockStatus('Passcode lock is on. Your entries and token are encrypted in this browser. There is no way to recover a forgotten passcode, but your GitHub copy is unaffected.', 'ok');
+        announce('Passcode lock turned on.');
+      } catch (err) {
+        vault.key = null;
+        setLockStatus('Couldn’t turn on the lock. Nothing was changed.', 'error');
+      }
+    });
+    $('#lock-now').addEventListener('click', lockNow);
+    $('#lock-disable').addEventListener('click', async () => {
+      if (!window.confirm('Turn off the passcode lock? Your entries and token will be stored unencrypted in this browser again.')) return;
+      await disableLock();
+      refreshPrivacyUI();
+      setLockStatus('Passcode lock is off.', 'ok');
+    });
+    $('#wipe-device').addEventListener('click', () => {
+      const cfg = syncConfig();
+      const unsaved = githubReady(cfg) ? dirtyMonths().length : 0;
+      let msg = 'Remove your entries, token and settings from this browser? Entries you haven’t downloaded or saved to GitHub will be lost.';
+      if (githubReady(cfg)) {
+        msg = unsaved
+          ? `${plural(unsaved, 'month')} hasn’t reached GitHub yet and would be lost. Remove everything from this browser anyway?`
+          : 'Remove your entries, token and settings from this browser? Your private GitHub copy stays, and you can connect again any time.';
+      }
+      if (!window.confirm(msg)) return;
+      vault.key = null;
+      clearAllLocal();
+      window.location.reload();
+    });
+    $$('input[name="motion"]').forEach((r) => r.addEventListener('change', () => {
+      savePrefs({ ...loadPrefs(), motion: r.value });
+      applyMotionPref();
+      refreshMotionUI();
+    }));
+  }
+
   function openSyncDialog() {
+    refreshPrivacyUI();
+    refreshMotionUI();
+    setLockStatus('');
     const cfg = syncConfig();
     el.ghOwner.value = cfg.owner;
     el.ghRepo.value = cfg.repo;
@@ -2238,6 +2495,7 @@
       el.importFile.value = '';
     });
     el.syncConnect.addEventListener('click', connectGitHub);
+    bindPrivacyEvents();
     el.syncDisconnect.addEventListener('click', disconnectGitHub);
     el.monthDownloads.forEach((b) => b.addEventListener('click', () => downloadMonth(CURRENT_MONTH, b.dataset.monthDl)));
   }
@@ -2321,7 +2579,12 @@
   }
 
   /* ---------- 8. Characters ---------- */
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  // Motion follows the device unless you pick “Always on” or “Reduced” in Settings.
+  const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  function motionReduced() {
+    const pref = document.documentElement.dataset.motion;
+    return pref === 'reduced' || (pref !== 'full' && reduceMotionQuery.matches);
+  }
 
   // Layout reads for the characters happen once per frame, before anything moves, to avoid forced reflows.
   const frameLayout = { journal: null, header: null, perch: null, panel: null };
@@ -2361,12 +2624,18 @@
   // --- shared interaction helpers -------------------------------------------------
   // Where the mouse is, so eyes can follow it. Touch has no hover, so eyes simply look ahead there.
   const pointer = { x: 0, y: 0, active: false };
-  window.addEventListener('pointermove', (e) => {
-    if (e.pointerType !== 'mouse') return;
+  let touchLookTimer = 0;
+  const followPointer = (e) => {
     pointer.x = e.clientX;
     pointer.y = e.clientY;
     pointer.active = true;
-  }, { passive: true });
+    if (e.pointerType !== 'mouse') { // a finger isn't there between touches: look back ahead after a moment
+      clearTimeout(touchLookTimer);
+      touchLookTimer = setTimeout(() => { pointer.active = false; }, 2500);
+    }
+  };
+  window.addEventListener('pointermove', followPointer, { passive: true });
+  window.addEventListener('pointerdown', followPointer, { passive: true });
   document.addEventListener('mouseout', (e) => { if (!e.relatedTarget) pointer.active = false; });
 
   /** Nudge pupils toward the pointer: `eyes` = { els, key }, measured from the eyes' screen position. */
@@ -2396,19 +2665,30 @@
     node[`_${cls}`] = setTimeout(() => node.classList.remove(cls), ms);
   }
 
-  /** Press and drag a character around; a plain click still counts as a click. */
+  /** Press and drag a character around; a plain click still counts as a click. On touch, a long press tickles. */
   function makeDraggable(handle, { onStart, onMove, onDrop }) {
     let drag = null;
     let justDragged = false;
+    let pressTimer = 0;
+    handle.addEventListener('contextmenu', (e) => e.preventDefault()); // long press shouldn't open a menu
     handle.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
-      drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false };
+      drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false, pressed: false };
       try { handle.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
+      clearTimeout(pressTimer);
+      if (e.pointerType !== 'mouse') {
+        pressTimer = setTimeout(() => {
+          if (!drag || drag.moved) return;
+          drag.pressed = true;
+          handle.dispatchEvent(new CustomEvent('char-tickle'));
+        }, 500);
+      }
     });
     handle.addEventListener('pointermove', (e) => {
       if (!drag || e.pointerId !== drag.id) return;
       if (!drag.moved) {
         if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6) return;
+        clearTimeout(pressTimer);
         drag.moved = true;
         handle.classList.add('is-dragging');
         onStart(e.clientX, e.clientY);
@@ -2417,6 +2697,11 @@
     });
     const end = (e) => {
       if (!drag || e.pointerId !== drag.id) return;
+      clearTimeout(pressTimer);
+      if (drag.pressed) { // a long press already did its thing: don't also count a tap
+        justDragged = true;
+        setTimeout(() => { justDragged = false; }, 0);
+      }
       if (drag.moved) {
         justDragged = true;
         handle.classList.remove('is-dragging');
@@ -2460,6 +2745,10 @@
       }
     });
     handle.addEventListener('pointerleave', () => { lastX = null; });
+    handle.addEventListener('char-tickle', () => { // long press on touch screens
+      const now = performance.now();
+      if (now - tickleAt > 1500) { tickleAt = now; onTickle(); }
+    });
   }
 
   /**
@@ -2643,7 +2932,7 @@
       if (me.carried) {
         // position comes from the drag
       } else if (me.falling) {
-        if (reduceMotion.matches) { land(); } else {
+        if (motionReduced()) { land(); } else {
           me.vy += GRAVITY * dt;
           me.y += me.vy * dt;
           if (me.y >= ground()) {
@@ -2654,7 +2943,7 @@
       } else {
         me.y = ground();
         if (me.moving) {
-          if (reduceMotion.matches) me.x = me.tx; // arrive at once
+          if (motionReduced()) me.x = me.tx; // arrive at once
           const dx = me.tx - me.x;
           const dist = Math.abs(dx);
           me.v += (SPEED[me.pace] - me.v) * Math.min(1, dt * 3);
@@ -2858,7 +3147,7 @@
           f.onLand = () => setState(me.sleeping ? 'sleeping' : 'perched');
           p = perchPoint();
         }
-        const raw = reduceMotion.matches ? 1 : clamp((now - f.t0) / f.dur, 0, 1);
+        const raw = motionReduced() ? 1 : clamp((now - f.t0) / f.dur, 0, 1);
         const t = raw < 0.5 ? 2 * raw * raw : 1 - ((-2 * raw + 2) ** 2) / 2; // ease in-out
         const cx = (f.from.x + p.x) / 2;
         const cy = Math.min(f.from.y, p.y) - 70;
@@ -3094,7 +3383,7 @@
       } else if (me.spring) {
         // Let go after a pull: bob back up to rest like a yo-yo on its thread.
         const h = home();
-        if (reduceMotion.matches) {
+        if (motionReduced()) {
           me.x = h.x;
           me.y = h.y;
           me.spring = null;
@@ -3133,7 +3422,7 @@
           const dx = wp.x - me.x;
           const dy = wp.y - me.y;
           const dist = Math.hypot(dx, dy);
-          const step = reduceMotion.matches ? Infinity : Math.min(SPEED[wp.mode], dist * 5 + 50) * dt; // eases into each stop
+          const step = motionReduced() ? Infinity : Math.min(SPEED[wp.mode], dist * 5 + 50) * dt; // eases into each stop
           if (dist <= step) {
             me.x = wp.x;
             me.y = wp.y;
@@ -3462,11 +3751,21 @@
 
     // Every change is saved as it happens, so closing a tab never needs to write (and can't clobber another tab).
     // When another tab saves, reload from storage instead.
-    window.addEventListener('storage', (e) => {
-      if (e.key !== STORAGE_KEY) return;
-      state.entries = loadEntries();
-      state.deleted = loadDeleted();
-      renderAll();
+    window.addEventListener('storage', async (e) => {
+      if (e.key === STORAGE_KEY && !vaultOpen()) {
+        state.entries = loadEntries();
+        state.deleted = loadDeleted();
+        renderAll();
+      } else if (e.key === VAULT_KEY && vaultOpen()) {
+        try {
+          const data = await openVault();
+          state.entries = entriesFromData(data);
+          state.deleted = data.deleted || {};
+          renderAll();
+        } catch (err) { /* lock changed in another tab: */ lockNow(); }
+      } else if (e.key === VAULT_KEY && !e.newValue && vaultOpen()) {
+        lockNow();
+      }
     });
 
     // A tab left open over the turn of a month moves to the new month when you come back to it.
@@ -3479,10 +3778,18 @@
     });
   }
 
-  function boot() {
+  async function boot() {
+    applyMotionPref();
     el.headerDate.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    state.entries = loadEntries();
-    state.deleted = loadDeleted();
+    if (vaultEnabled()) {
+      const data = await unlockScreen();
+      state.entries = entriesFromData(data);
+      state.deleted = data.deleted || {};
+    } else {
+      state.entries = loadEntries();
+      state.deleted = loadDeleted();
+    }
+    startAutoLock();
     const prefs = loadPrefs();
     state.greeting = guideGreeting(prefs);
     savePrefs({ ...prefs, lastMonth: CURRENT_MONTH });
