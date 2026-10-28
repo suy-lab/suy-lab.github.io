@@ -996,7 +996,7 @@ body.map-open .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
 .owl .char-bubble { top: 12px; }
 .owl .char-bubble::after { top: -6px; }
 .owl .char-zzz { left: 14px; top: -80px; }
-.owl:not([data-state="perched"]):not([data-state="sleeping"]) .char-hit { pointer-events: none; }
+
 
 .owl .owl-body { fill: #9B7E6B; }
 .owl .owl-wing { fill: #7E6253; }
@@ -1341,6 +1341,100 @@ input::placeholder, textarea::placeholder { color: #6B6862; opacity: 1; }
   .perch svg { width: 64px; height: 22px; }
   .spider-web { width: 90px; height: 90px; }
 }
+
+/* ---------- 11. Sync status light & interactive characters ---------- */
+.sync-dot { width: 9px; height: 9px; border-radius: 50%; background: #A8A49A; box-shadow: 0 0 0 2px var(--surface); flex-shrink: 0; transition: background-color .3s; }
+.sync-btn[data-sync="saved"] .sync-dot { background: #2F855A; }
+.sync-btn[data-sync="pending"] .sync-dot,
+.sync-btn[data-sync="saving"] .sync-dot,
+.sync-btn[data-sync="loading"] .sync-dot { background: #C27C0E; animation: sync-pulse 1s ease-in-out infinite; }
+.sync-btn[data-sync="pending"] .sync-dot { animation: none; }
+.sync-btn[data-sync="error"] .sync-dot { background: #B93A0B; }
+.sync-btn[data-sync="offline"] .sync-dot { background: transparent; box-shadow: inset 0 0 0 2px #8A8780; }
+.sync-btn[data-sync="off"] .sync-dot { background: transparent; box-shadow: inset 0 0 0 2px #A8A49A; }
+.sync-btn[data-sync="error"] { border-color: #E2B4A6; }
+@keyframes sync-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+.sync-now {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  font-size: 14px;
+  font-weight: 500;
+}
+.sync-now::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #A8A49A; flex-shrink: 0; }
+.sync-now[data-sync="saved"]::before { background: #2F855A; }
+.sync-now[data-sync="pending"]::before, .sync-now[data-sync="saving"]::before, .sync-now[data-sync="loading"]::before { background: #C27C0E; }
+.sync-now[data-sync="error"]::before { background: #B93A0B; }
+.sync-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.sync-steps strong { color: var(--ink); }
+.sync-steps code { padding: 1px 5px; border-radius: 4px; background: var(--bg); font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+.sync-advanced summary { display: inline-flex; align-items: center; min-height: 36px; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; }
+.sync-advanced .field-grid { margin-top: 6px; }
+
+/* characters: grab them */
+.char-hit { cursor: grab; touch-action: none; }
+.char-hit.is-dragging { cursor: grabbing; }
+
+/* Dr. Pip */
+.scientist .eyes-happy { display: none; fill: none; stroke: #1F1E1B; stroke-width: 1.5; stroke-linecap: round; }
+.scientist .smile { transform-box: fill-box; transform-origin: center; transition: transform .3s; }
+.scientist[data-state="waving"] .arm-front { animation: sci-wave .32s ease-in-out infinite alternate; }
+.scientist[data-state="thinking"] .arm-front { animation: sci-scratch .45s ease-in-out infinite alternate; }
+.scientist[data-state="thinking"] .head { transform: rotate(8deg); }
+.scientist[data-state="carried"] .arm-front,
+.scientist[data-state="falling"] .arm-front { transform: rotate(-160deg); }
+.scientist[data-state="carried"] .arm-back,
+.scientist[data-state="falling"] .arm-back { transform: rotate(160deg); }
+.scientist[data-state="carried"] .leg-front { animation: sci-dangle .55s ease-in-out infinite alternate; }
+.scientist[data-state="carried"] .leg-back { animation: sci-dangle .55s ease-in-out infinite alternate-reverse; }
+.scientist[data-state="carried"] .char-svg { animation: sway 1.1s ease-in-out infinite; }
+.scientist[data-state="falling"] .leg-front { transform: rotate(18deg); }
+.scientist[data-state="falling"] .leg-back { transform: rotate(-18deg); }
+.scientist[data-state="tickled"] .eyes { display: none; }
+.scientist[data-state="tickled"] .eyes-happy { display: inline; }
+.scientist[data-state="tickled"] .char-svg { animation: hop .3s var(--ease-out) 4; }
+.scientist[data-state="tickled"] .arm-front { transform: rotate(-40deg); }
+.scientist[data-state="worried"] .arm-front { transform: rotate(-150deg); }
+.scientist[data-state="worried"] .head { transform: rotate(-6deg); }
+.scientist[data-state="worried"] .smile { transform: scaleY(-1); }
+.scientist[data-state="waving"] .clipboard,
+.scientist[data-state="thinking"] .clipboard,
+.scientist[data-state="carried"] .clipboard,
+.scientist[data-state="falling"] .clipboard,
+.scientist[data-state="worried"] .clipboard { display: none; }
+@keyframes sci-wave { from { transform: rotate(-165deg); } to { transform: rotate(-122deg); } }
+@keyframes sci-scratch { from { transform: rotate(-172deg); } to { transform: rotate(-160deg); } }
+@keyframes sci-dangle { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
+
+/* Minerva */
+.owl[data-state="flying"] .char-hit { pointer-events: none; }
+.owl .owl-eyes-happy { display: none; fill: none; stroke: #2A211B; stroke-width: 1.8; stroke-linecap: round; }
+.owl.is-happy .owl-eyes, .owl.is-tickled .owl-eyes { display: none; }
+.owl.is-happy .owl-eyes-happy, .owl.is-tickled .owl-eyes-happy { display: inline; }
+.owl.is-happy .char-svg, .owl.is-hop .char-svg { animation: owl-hop .5s var(--ease-out); }
+.owl.is-tickled .char-svg { animation: owl-wiggle .16s ease-in-out 8 alternate; }
+.owl.is-tickled .wing-l { animation: flap-l .16s ease-in-out 8 alternate; }
+.owl.is-tickled .wing-r { animation: flap-r .16s ease-in-out 8 alternate; }
+.owl[data-state="carried"] .wing-l { animation: flap-l .32s ease-in-out infinite alternate; }
+.owl[data-state="carried"] .wing-r { animation: flap-r .32s ease-in-out infinite alternate; }
+.owl[data-state="carried"] .owl-feet { transform: translateY(1.5px); }
+@keyframes owl-hop { 0%, 100% { translate: 0 0; } 40% { translate: 0 -9px; } }
+@keyframes owl-wiggle { from { rotate: -7deg; } to { rotate: 7deg; } }
+
+/* Kip */
+.spider-eyes-happy { display: none; fill: none; stroke: #EADBC4; stroke-width: 1.5; stroke-linecap: round; }
+.spider.is-tickled .spider-eyes { display: none; }
+.spider.is-tickled .spider-eyes-happy { display: inline; }
+.spider.is-wiggle .legs-l, .spider.is-tickled .legs-l { animation: scuttle-l .17s ease-in-out infinite alternate; }
+.spider.is-wiggle .legs-r, .spider.is-tickled .legs-r { animation: scuttle-r .17s ease-in-out infinite alternate; }
+.spider.is-tickled .char-svg { animation: dangle .45s ease-in-out infinite; }
+.spider[data-state="dangling"] .legs-l { animation: scuttle-l .09s ease-in-out infinite alternate; }
+.spider[data-state="dangling"] .legs-r { animation: scuttle-r .09s ease-in-out infinite alternate; }
+.spider[data-state="dangling"] .char-svg { animation: dangle .9s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }

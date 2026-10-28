@@ -31,10 +31,10 @@
         <a class="page-link" href="archive.html" aria-current="page">Archive</a>
       </nav>
       <p class="header-date" id="header-date"></p>
-      <button class="sync-btn" id="sync-open" type="button" aria-label="Save and sync">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 7.97"/><path d="M12 12v8M9 15l3-3 3 3"/></svg>
-        <span class="sync-label">Save &amp; sync</span>
-        <span class="sync-badge" id="sync-badge" hidden></span>
+      <button class="sync-btn" id="sync-open" type="button" data-sync="off" aria-label="Settings and sync">
+        <span class="sync-dot" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4 4 0 0 1-.5 7.97H7Z"/></svg>
+        <span class="sync-label" id="sync-label">Not connected</span>
       </button>
     </div>
   </header>
@@ -156,7 +156,7 @@
       <div class="entry-list" id="entry-list" aria-label="Archived entries by month"></div>
 
       <footer class="journal-footer">
-        <p>Saved in this browser. Use <strong>Save &amp; sync</strong> to download or keep it on GitHub.</p>
+        <p>Saved in this browser. With GitHub connected in <strong>Settings</strong>, it also saves itself to your private repository.</p>
         <button class="text-btn" id="reset-journal" type="button" hidden>Reset to the 3 sample entries</button>
       </footer>
     </section>
@@ -195,19 +195,51 @@
     </aside>
   </main>
 
-  <!-- ============ Save & sync: downloads, import, GitHub ============ -->
+  <!-- ============ Settings: private GitHub sync, downloads, import ============ -->
   <dialog class="sync-dialog" id="sync-dialog" aria-labelledby="sync-title">
     <form class="sync-form" method="dialog">
       <header class="sync-head">
-        <h2 id="sync-title">Save &amp; sync</h2>
+        <h2 id="sync-title">Settings</h2>
         <button class="icon-btn" value="close" aria-label="Close">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </header>
 
+      <section class="sync-section" aria-labelledby="gh-title">
+        <h3 id="gh-title">Automatic saving to GitHub</h3>
+        <p class="sync-now" id="sync-state"></p>
+        <p class="sync-help">
+          Your entries save themselves to a <strong>private</strong> repository a few seconds after each change,
+          and load on any device you connect. The site stays public; only a browser with your token can see your entries.
+        </p>
+        <ol class="sync-steps">
+          <li>On GitHub, <a href="https://github.com/new" target="_blank" rel="noopener">create a <strong>private</strong> repository</a> named <code>research-journal-data</code>. It can stay empty.</li>
+          <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a fine-grained token</a> with access to <strong>only that repository</strong> and <strong>Contents: Read and write</strong>.</li>
+          <li>Paste it below and press <strong>Connect</strong>. You only do this once per browser.</li>
+        </ol>
+        <div class="field-grid">
+          <label class="field span-2"><span>GitHub username</span><input id="gh-owner" type="text" autocomplete="off" spellcheck="false" placeholder="suy-lab"></label>
+          <label class="field span-2"><span>Data repository</span><input id="gh-repo" type="text" autocomplete="off" spellcheck="false" placeholder="research-journal-data"></label>
+          <label class="field span-4"><span>Token</span><input id="gh-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
+          <label class="check span-4"><input id="gh-remember" type="checkbox" checked> Remember the token on this computer</label>
+        </div>
+        <details class="sync-advanced">
+          <summary>Advanced</summary>
+          <div class="field-grid">
+            <label class="field span-2"><span>Branch</span><input id="gh-branch" type="text" autocomplete="off" spellcheck="false" placeholder="main"></label>
+            <label class="field span-2"><span>Folder in the repository</span><input id="gh-folder" type="text" autocomplete="off" spellcheck="false" placeholder="(top level)"></label>
+          </div>
+        </details>
+        <p class="import-status sync-status" id="sync-status" role="status"></p>
+        <div class="sync-row">
+          <button class="btn btn-primary" type="button" id="sync-connect">Connect</button>
+          <button class="btn btn-ghost" type="button" id="sync-disconnect" hidden>Disconnect</button>
+        </div>
+      </section>
+
       <section class="sync-section" aria-labelledby="dl-title">
-        <h3 id="dl-title">Download</h3>
-        <p class="sync-help">Keep a copy, or commit the JSON file to your repository yourself.</p>
+        <h3 id="dl-title">Download &amp; import</h3>
+        <p class="sync-help">Keep your own copy of a month, or bring entries in from a file.</p>
         <div class="sync-row">
           <label class="field sync-month"><span>Month</span><select id="dl-month"></select></label>
           <button class="btn btn-soft" type="button" data-dl="json">JSON</button>
@@ -217,33 +249,6 @@
           <button class="btn btn-ghost" type="button" data-dl="all">Download everything (JSON)</button>
           <button class="btn btn-ghost" type="button" id="import-btn">Import a JSON file…</button>
           <input type="file" id="import-file" accept=".json,application/json" hidden>
-        </div>
-      </section>
-
-      <section class="sync-section" aria-labelledby="gh-title">
-        <h3 id="gh-title">Save to GitHub</h3>
-        <p class="sync-help">
-          Each month is saved as <code>data/2026-10.json</code> (plus <code>data/index.json</code>) in your repository,
-          and this site loads them on any computer. <strong>Your repository is public, so anyone can read these notes.</strong>
-        </p>
-        <p class="sync-help">
-          Use a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a>
-          with access to <strong>only this repository</strong> and <strong>Contents: Read and write</strong>.
-          It is sent only to GitHub. Only remember it on your own computer.
-        </p>
-        <div class="field-grid">
-          <label class="field span-2"><span>Owner</span><input id="gh-owner" type="text" autocomplete="off" spellcheck="false" placeholder="your-username"></label>
-          <label class="field span-2"><span>Repository</span><input id="gh-repo" type="text" autocomplete="off" spellcheck="false" placeholder="research-journal"></label>
-          <label class="field span-2"><span>Branch</span><input id="gh-branch" type="text" autocomplete="off" spellcheck="false" placeholder="main"></label>
-          <label class="field span-2"><span>Folder</span><input id="gh-folder" type="text" autocomplete="off" spellcheck="false" placeholder="data"></label>
-          <label class="field span-4"><span>Token</span><input id="gh-token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"></label>
-          <label class="check span-4"><input id="gh-remember" type="checkbox"> Remember the token on this computer</label>
-        </div>
-        <p class="sync-dirty" id="sync-dirty"></p>
-        <p class="import-status sync-status" id="sync-status" role="status"></p>
-        <div class="sync-row">
-          <button class="btn btn-primary" type="button" id="sync-push">Save changes to GitHub</button>
-          <button class="btn btn-ghost" type="button" id="sync-pull">Load from GitHub</button>
         </div>
       </section>
     </form>
@@ -286,6 +291,7 @@
             <circle class="hair" cx="52" cy="21" r="3.5" />
             <g class="eyes"><circle cx="41" cy="31" r="1.6" /><circle cx="49.5" cy="31" r="1.6" /></g>
             <path class="eyes-closed" d="M38.5 31.5 q2.5 2 5 0 M47 31.5 q2.5 2 5 0" />
+            <path class="eyes-happy" d="M38.5 32.5 q2.5 -2.8 5 0 M47 32.5 q2.5 -2.8 5 0" />
             <g class="glasses"><circle cx="41" cy="31" r="4.3" /><circle cx="49.5" cy="31" r="4.3" /><path d="M36.7 30 L29 28" /></g>
             <circle class="cheek" cx="52" cy="35.5" r="2" />
             <path class="smile" d="M44 37 q3 2.2 6 0" />
@@ -337,6 +343,7 @@
           <circle class="spider-glint" cx="36.6" cy="30.6" r=".8" />
         </g>
         <path class="spider-eyes-closed" d="M21.5 32 q3.5 2.5 7 0 M31.5 32 q3.5 2.5 7 0" />
+        <path class="spider-eyes-happy" d="M21.5 33 q3.5 -3.4 7 0 M31.5 33 q3.5 -3.4 7 0" />
         <circle class="spider-cheek" cx="20.5" cy="37" r="2" />
         <circle class="spider-cheek" cx="39.5" cy="37" r="2" />
         <path class="spider-smile" d="M27 38.5 q3 2.4 6 0" />

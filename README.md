@@ -4,7 +4,12 @@ A one-page research journal for papers, ideas and daily logs, hosted at https://
 
 - `index.html`: this month's entries
 - `archive.html`: earlier months
-- `data/`: month files written by **Save & sync → Save to GitHub** (`YYYY-MM.json` and `index.json`)
+- `fonts/`: self-hosted JetBrains Mono (SIL Open Font License)
 
-Entries are saved in the browser, and can be downloaded as JSON/Markdown or committed here from the site.
-This repository is public, so anything saved to `data/` is readable by anyone.
+## Where the entries live
+
+This repository only holds the site, which is public. Entries are not stored here.
+
+They are saved in the browser and, once connected in **Settings**, saved automatically to a separate
+**private** repository (`research-journal-data` by default) as one file per month (`YYYY-MM.json`) plus `index.json`.
+Only a browser holding your fine-grained token (limited to that repository, Contents: Read and write) can read or write them.

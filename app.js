@@ -216,7 +216,8 @@
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (err) { /* storage blocked */ }
   }
 
-  function persistNow() {
+  /** Save to this browser; unless told otherwise, also queue an automatic save to GitHub. */
+  function persistNow({ sync: queueSync = true } = {}) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         version: 2,
@@ -226,6 +227,7 @@
         deleted: state.deleted,
       }));
     } catch (err) { /* storage full or blocked: keep working in memory */ }
+    if (queueSync) scheduleAutoSave();
   }
 
   /* ---------- DOM references ---------- */
@@ -279,12 +281,12 @@
     monthNav: $('#month-nav'),
     monthDownloads: $$('[data-month-dl]'),
     syncOpen: $('#sync-open'),
-    syncBadge: $('#sync-badge'),
+    syncLabel: $('#sync-label'),
     syncDialog: $('#sync-dialog'),
     syncStatus: $('#sync-status'),
-    syncDirty: $('#sync-dirty'),
-    syncPush: $('#sync-push'),
-    syncPull: $('#sync-pull'),
+    syncState: $('#sync-state'),
+    syncConnect: $('#sync-connect'),
+    syncDisconnect: $('#sync-disconnect'),
     dlMonth: $('#dl-month'),
     importBtn: $('#import-btn'),
     importFile: $('#import-file'),
@@ -546,7 +548,6 @@
   function renderAll() {
     renderFilters();
     renderList();
-    updateSyncBadge();
     if (state.mapSeed) renderMap();
   }
 
@@ -1711,9 +1712,10 @@
   }
 
   /* ---------- 7b. Month files: download, import, GitHub sync ---------- */
-  const SYNC_KEY = 'research-journal:sync';
-  const SYNCED_KEY = 'research-journal:synced';
-  const TOKEN_KEY = 'research-journal:token';
+  // Keys for the private-repo sync (new names, so settings from the old public-repo version don't carry over).
+  const SYNC_KEY = 'research-journal:sync-private';
+  const SYNCED_KEY = 'research-journal:synced-private';
+  const TOKEN_KEY = 'research-journal:token-private';
 
   function entriesOfMonth(m) {
     return state.entries.filter((e) => monthOf(e) === m).sort((a, b) => a.id.localeCompare(b.id));
@@ -1824,18 +1826,24 @@
       const { added, updated } = mergeEntries(list);
       persistNow();
       renderAll();
-      setSyncStatus(`Imported ${file.name}: ${added} new, ${updated} updated.`, 'ok');
+      setConnectStatus(`Imported ${file.name}: ${added} new, ${updated} updated.`, 'ok');
     } catch (err) {
-      setSyncStatus('That file isn’t a Research Journal JSON export.', 'error');
+      setConnectStatus('That file isn’t a Research Journal JSON export.', 'error');
     }
   }
 
-  // --- GitHub ---------------------------------------------------------------
-  function guessRepo() {
-    if (!window.location.hostname.endsWith('.github.io')) return {};
-    const owner = window.location.hostname.split('.')[0];
-    const first = window.location.pathname.split('/').filter(Boolean)[0];
-    return { owner, repo: first && !first.endsWith('.html') ? first : `${owner}.github.io` };
+  // --- GitHub: entries live in your PRIVATE data repository and save themselves -----
+  // The site (public) and the data (private) are separate repos. Only a browser holding your token can read
+  // or write the data, so visitors to the site see an empty journal.
+  const DEFAULT_DATA_REPO = 'research-journal-data';
+  const LAST_SAVED_KEY = 'research-journal:last-saved';
+  const REMOTE_INDEX_KEY = 'research-journal:remote-index-private';
+  const AUTOSAVE_IDLE_MS = 5000; // save a few seconds after you stop editing…
+  const AUTOSAVE_MAX_WAIT_MS = 30000; // …but never hold changes longer than this
+  const RETRY_MS = 30000;
+
+  function siteOwner() {
+    return window.location.hostname.endsWith('.github.io') ? window.location.hostname.split('.')[0] : '';
   }
 
   function syncConfig() {
@@ -1845,13 +1853,12 @@
       saved = JSON.parse(localStorage.getItem(SYNC_KEY)) || {};
       token = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || '';
     } catch (err) { /* storage blocked */ }
-    const guess = guessRepo();
     return {
-      owner: saved.owner || guess.owner || '',
-      repo: saved.repo || guess.repo || '',
+      owner: saved.owner || siteOwner(),
+      repo: saved.repo || DEFAULT_DATA_REPO,
       branch: saved.branch || 'main',
-      folder: saved.folder ?? 'data',
-      remember: Boolean(saved.remember),
+      folder: saved.folder || '',
+      remember: saved.remember !== false,
       token,
     };
   }
@@ -1869,18 +1876,16 @@
   const githubReady = (cfg) => Boolean(cfg.owner && cfg.repo && cfg.token);
 
   // Remember each month's “updated” stamp from index.json, so later visits only fetch months that changed.
-  const REMOTE_INDEX_KEY = 'research-journal:remote-index';
-  function changedMonths(source, months, all) {
+  function changedMonths(months, all) {
     if (all) return months;
     let known = {};
-    try { known = (JSON.parse(localStorage.getItem(REMOTE_INDEX_KEY)) || {})[source] || {}; } catch (err) { known = {}; }
+    try { known = JSON.parse(localStorage.getItem(REMOTE_INDEX_KEY)) || {}; } catch (err) { known = {}; }
     return months.filter((x) => !x.updated || known[x.month] !== x.updated);
   }
-  function rememberMonths(source, months) {
+
+  function rememberMonths(months) {
     try {
-      const saved = JSON.parse(localStorage.getItem(REMOTE_INDEX_KEY)) || {};
-      saved[source] = Object.fromEntries(months.map((x) => [x.month, x.updated]));
-      localStorage.setItem(REMOTE_INDEX_KEY, JSON.stringify(saved));
+      localStorage.setItem(REMOTE_INDEX_KEY, JSON.stringify(Object.fromEntries(months.map((x) => [x.month, x.updated]))));
     } catch (err) { /* storage blocked: next visit fetches everything again */ }
   }
 
@@ -1925,158 +1930,221 @@
   function ghError(status) {
     return {
       401: 'GitHub rejected the token. Check it is correct and hasn’t expired.',
-      403: 'The token can’t write here. It needs “Contents: Read and write” for this repository.',
-      404: 'Repository, branch or folder not found, or the token has no access to it.',
-      409: 'GitHub reported a conflict. Load from GitHub first, then save again.',
-      422: 'GitHub refused the file. Check the branch and folder names.',
+      403: 'The token can’t save here. It needs “Contents: Read and write” for the data repository.',
+      404: 'The data repository wasn’t found, or the token has no access to it.',
+      409: 'GitHub reported a conflict. It will retry.',
+      422: 'GitHub refused the file. Check the branch name in Advanced settings.',
     }[status] || `GitHub returned an error (${status}).`;
   }
 
   async function ghGetFile(cfg, name) {
     const res = await fetch(`${ghUrl(cfg, name)}?ref=${encodeURIComponent(cfg.branch)}`, { headers: ghHeaders(cfg), cache: 'no-store' });
-    if (res.status === 404) return null;
+    if (res.status === 404 || res.status === 409) return null; // missing file, or a brand-new empty repository
     if (!res.ok) throw new Error(ghError(res.status));
     const data = await res.json();
     return { sha: data.sha, text: fromBase64(data.content || '') };
   }
 
-  /** Create or update one file in the repository; returns false when it was already up to date. */
-  async function ghPutFile(cfg, name, text, message) {
-    const existing = await ghGetFile(cfg, name);
-    if (existing && existing.text === text) return false;
-    const res = await fetch(ghUrl(cfg, name), {
+  /** Create or update one file. `existing` is what ghGetFile returned for it (null for a new file). */
+  async function ghPutFile(cfg, name, text, message, existing) {
+    const send = (withBranch) => fetch(ghUrl(cfg, name), {
       method: 'PUT',
       headers: { ...ghHeaders(cfg), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, content: toBase64(text), branch: cfg.branch, ...(existing ? { sha: existing.sha } : {}) }),
+      body: JSON.stringify({
+        message,
+        content: toBase64(text),
+        ...(withBranch ? { branch: cfg.branch } : {}),
+        ...(existing ? { sha: existing.sha } : {}),
+      }),
     });
+    let res = await send(true);
+    // The very first file in an empty repository creates its default branch, so retry without naming one.
+    if (!res.ok && !existing && (res.status === 404 || res.status === 422)) res = await send(false);
     if (!res.ok) throw new Error(ghError(res.status));
-    return true;
   }
 
-  async function pushToGitHub() {
-    const cfg = readSyncForm();
-    storeSyncConfig(cfg);
-    if (!githubReady(cfg)) {
-      setSyncStatus('Fill in the owner, repository and token first.', 'error');
-      return;
+  async function updateRemoteIndex(cfg, pushedMonths) {
+    const index = await ghGetFile(cfg, 'index.json');
+    const remoteCounts = new Map();
+    const remoteUpdated = new Map();
+    try {
+      (index ? JSON.parse(index.text).months : []).forEach((x) => {
+        remoteCounts.set(x.month, x.count);
+        remoteUpdated.set(x.month, x.updated);
+      });
+    } catch (err) { /* rebuild it */ }
+    const now = new Date().toISOString();
+    const months = [...new Set([...remoteCounts.keys(), ...allMonths()])].sort().reverse();
+    const entries = months.map((m) => ({
+      month: m,
+      count: entriesOfMonth(m).length,
+      updated: pushedMonths.includes(m) ? now : (remoteUpdated.get(m) || now),
+    }));
+    const text = `${JSON.stringify({ version: 1, updated: now, months: entries }, null, 2)}\n`;
+    if (!index || index.text !== text) await ghPutFile(cfg, 'index.json', text, 'Journal: update month index', index);
+    rememberMonths(entries);
+  }
+
+  // --- automatic saving and the status light ---------------------------------------
+  const sync = {
+    status: 'off', detail: '', booted: false, running: false, again: false,
+    lastSaved: 0, lastPull: 0, idleTimer: 0, maxTimer: 0, retryTimer: 0,
+  };
+  const SYNC_LABELS = {
+    off: 'Not connected', loading: 'Loading…', pending: 'Unsaved', saving: 'Saving…',
+    saved: 'Saved', offline: 'Offline', error: 'Not saved',
+  };
+
+  function timeAgo(t) {
+    const s = Math.round((Date.now() - t) / 1000);
+    if (s < 45) return 'just now';
+    const m = Math.round(s / 60);
+    if (m < 60) return `${plural(m, 'minute')} ago`;
+    const h = Math.round(m / 60);
+    if (h < 24) return `${plural(h, 'hour')} ago`;
+    return `on ${formatDate(t)}`;
+  }
+
+  function syncDetail() {
+    const cfg = syncConfig();
+    if (sync.status === 'off') return 'Not connected to GitHub. Your entries are only in this browser.';
+    if (sync.status === 'saved') {
+      return sync.lastSaved
+        ? `Saved to ${cfg.owner}/${cfg.repo} ${timeAgo(sync.lastSaved)}.`
+        : `In sync with ${cfg.owner}/${cfg.repo}.`;
     }
+    return sync.detail;
+  }
+
+  function setSyncState(status, detail = '') {
+    sync.status = status;
+    sync.detail = detail;
+    renderSyncState();
+  }
+
+  function renderSyncState() {
+    if (!el.syncOpen) return;
+    const detail = syncDetail();
+    el.syncLabel.textContent = SYNC_LABELS[sync.status];
+    el.syncOpen.dataset.sync = sync.status;
+    el.syncOpen.title = detail;
+    el.syncOpen.setAttribute('aria-label', `Settings and sync. ${detail}`);
+    if (el.syncState) {
+      el.syncState.textContent = detail;
+      el.syncState.dataset.sync = sync.status;
+    }
+  }
+
+  /** Called after every local change: save to GitHub once you pause. */
+  function scheduleAutoSave() {
+    if (!sync.booted) return;
+    if (!githubReady(syncConfig())) { setSyncState('off'); return; }
+    if (!dirtyMonths().length) return;
+    if (sync.status !== 'saving') setSyncState('pending', 'Changes will be saved to GitHub in a moment…');
+    clearTimeout(sync.idleTimer);
+    sync.idleTimer = setTimeout(autoSave, AUTOSAVE_IDLE_MS);
+    if (!sync.maxTimer) sync.maxTimer = setTimeout(autoSave, AUTOSAVE_MAX_WAIT_MS);
+  }
+
+  async function autoSave() {
+    clearTimeout(sync.idleTimer);
+    clearTimeout(sync.maxTimer);
+    clearTimeout(sync.retryTimer);
+    sync.maxTimer = 0;
+    const cfg = syncConfig();
+    if (!githubReady(cfg)) { setSyncState('off'); return; }
+    if (!navigator.onLine) { setSyncState('offline', 'Offline. Your changes will be saved to GitHub when you’re back online.'); return; }
+    if (sync.running) { sync.again = true; return; }
     const months = dirtyMonths();
     if (!months.length) {
-      setSyncStatus('Everything is already saved to GitHub.', 'ok');
+      if (sync.status !== 'saved') setSyncState('saved');
       return;
     }
-    setSyncBusy(true);
+    sync.running = true;
+    setSyncState('saving', `Saving ${months.map((m) => monthLabel(m)).join(', ')} to GitHub…`);
     try {
       const synced = syncedHashes();
+      const pushed = [];
       for (const m of months) {
-        setSyncStatus(`Saving ${monthLabel(m)}…`, 'busy');
+        const name = `${m}.json`;
+        const existing = await ghGetFile(cfg, name);
+        if (existing) { // another device may have saved this month: fold its edits in first, newest wins
+          try {
+            const remote = JSON.parse(existing.text);
+            const r = mergeEntries(Array.isArray(remote.entries) ? remote.entries : []);
+            if (r.added || r.updated) { persistNow({ sync: false }); renderAll(); }
+          } catch (err) { /* unreadable remote file: ours replaces it */ }
+        }
         const text = monthFileText(m);
-        await ghPutFile(cfg, `${m}.json`, text, `Research journal: ${monthLabel(m)}`);
+        if (!existing || existing.text !== text) {
+          await ghPutFile(cfg, name, text, `Journal: ${monthLabel(m)}`, existing);
+          pushed.push(m);
+        }
         synced[m] = hashText(text);
         storeSynced(synced);
       }
-      setSyncStatus('Updating the month index…', 'busy');
-      const index = await ghGetFile(cfg, 'index.json');
-      const remoteCounts = new Map();
-      const remoteUpdated = new Map();
-      try {
-        (index ? JSON.parse(index.text).months : []).forEach((x) => {
-          remoteCounts.set(x.month, x.count);
-          remoteUpdated.set(x.month, x.updated);
-        });
-      } catch (err) { /* rebuild it */ }
-      const pushedAt = new Date().toISOString();
-      const months2 = [...new Set([...remoteCounts.keys(), ...allMonths()])].sort().reverse();
-      const indexText = `${JSON.stringify({
-        version: 1,
-        updated: new Date().toISOString(),
-        months: months2.map((m) => ({
-          month: m,
-          count: entriesOfMonth(m).length || remoteCounts.get(m) || 0,
-          updated: months.includes(m) ? pushedAt : (remoteUpdated.get(m) || pushedAt),
-        })),
-      }, null, 2)}\n`;
-      await ghPutFile(cfg, 'index.json', indexText, 'Research journal: update month index');
+      if (pushed.length) await updateRemoteIndex(cfg, pushed);
       state.deleted = {}; // GitHub now matches, so deleted entries can't come back
-      persistNow();
-      setSyncStatus(`Saved ${plural(months.length, 'month')} to ${cfg.owner}/${cfg.repo}. GitHub Pages shows it within a minute or two.`, 'ok');
-      Scientist.cheer('Saved to GitHub!');
+      persistNow({ sync: false });
+      sync.lastSaved = Date.now();
+      try { localStorage.setItem(LAST_SAVED_KEY, String(sync.lastSaved)); } catch (err) { /* fine */ }
+      setSyncState('saved');
+      if (pushed.length) Scientist.react('saved');
     } catch (err) {
-      setSyncStatus(err.message || 'Couldn’t reach GitHub. Check your connection.', 'error');
+      setSyncState('error', `${err.message || 'Couldn’t reach GitHub.'} Trying again shortly.`);
+      Scientist.react('error');
+      sync.retryTimer = setTimeout(autoSave, RETRY_MS);
     } finally {
-      setSyncBusy(false);
-      updateSyncBadge();
+      sync.running = false;
+      if (sync.again) { sync.again = false; scheduleAutoSave(); }
     }
   }
 
-  /**
-   * Load saved months: first the files published next to the site (GitHub Pages, no token),
-   * then the repository itself when a token is set (fresh even before Pages rebuilds).
-   */
-  async function pullRemote({ quiet = false } = {}) {
+  /** Bring in months saved from another device (only the ones that changed, unless `all`). */
+  async function pullRemote({ all = false } = {}) {
     const cfg = syncConfig();
-    const folder = cfg.folder || 'data';
-    const sources = [async () => {
-      const idx = await fetchJson(`${folder}/index.json`, { cache: 'no-store' });
-      if (!idx || !Array.isArray(idx.months)) return null;
-      const files = await Promise.all(changedMonths('pages', idx.months, !quiet)
-        .map((x) => fetchJson(`${folder}/${x.month}.json`, { cache: 'no-store' })));
-      rememberMonths('pages', idx.months);
-      return files;
-    }];
-    if (githubReady(cfg) || (!quiet && cfg.owner && cfg.repo)) {
-      sources.push(async () => {
-        const idx = await ghGetFile(cfg, 'index.json');
-        if (!idx) return null;
+    if (!githubReady(cfg)) { setSyncState('off'); return false; }
+    if (!navigator.onLine) { setSyncState('offline', 'Offline. Showing the entries saved in this browser.'); return false; }
+    if (!['saving', 'pending'].includes(sync.status)) setSyncState('loading', 'Loading your entries from GitHub…');
+    try {
+      const idx = await ghGetFile(cfg, 'index.json');
+      let added = 0;
+      let updated = 0;
+      if (idx) {
         const months = JSON.parse(idx.text).months || [];
-        const files = await Promise.all(changedMonths('api', months, !quiet).map((x) => ghGetFile(cfg, `${x.month}.json`)));
-        rememberMonths('api', months);
-        return files.filter(Boolean).map((f) => JSON.parse(f.text));
-      });
-    }
-    let added = 0;
-    let updated = 0;
-    let found = false;
-    let failure = '';
-    const synced = syncedHashes();
-    for (const load of sources) {
-      try {
-        const files = await load();
-        if (!files) continue;
-        found = true;
-        files.forEach((f) => {
-          if (!f || !Array.isArray(f.entries)) return;
-          const r = mergeEntries(f.entries);
+        const files = await Promise.all(changedMonths(months, all).map((x) => ghGetFile(cfg, `${x.month}.json`)));
+        const synced = syncedHashes();
+        files.filter(Boolean).forEach((f) => {
+          let data;
+          try { data = JSON.parse(f.text); } catch (err) { return; }
+          if (!Array.isArray(data.entries)) return;
+          const r = mergeEntries(data.entries);
           added += r.added;
           updated += r.updated;
-          const remote = monthFileText(f.month, [...f.entries].sort((a, b) => a.id.localeCompare(b.id)));
-          if (f.month && monthFileText(f.month) === remote) synced[f.month] = hashText(remote);
+          if (data.month && monthFileText(data.month) === f.text) synced[data.month] = hashText(f.text);
         });
-      } catch (err) {
-        failure = err.message;
+        storeSynced(synced);
+        rememberMonths(months);
       }
-    }
-    storeSynced(synced);
-    if (added || updated) {
-      persistNow();
-      renderAll();
-    }
-    updateSyncBadge();
-    if (!quiet) {
-      if (found) setSyncStatus(`Loaded from GitHub: ${added} new, ${updated} updated.`, 'ok');
-      else setSyncStatus(failure || 'No saved months found yet. Save to GitHub first.', failure ? 'error' : 'ok');
+      sync.lastPull = Date.now();
+      if (added || updated) {
+        persistNow({ sync: false });
+        renderAll();
+      }
+      if (dirtyMonths().length) scheduleAutoSave();
+      else setSyncState('saved');
+      return { added, updated };
+    } catch (err) {
+      setSyncState('error', `${err.message || 'Couldn’t reach GitHub.'}`);
+      return false;
     }
   }
 
-  // --- the Save & sync dialog --------------------------------------------------
-  function setSyncStatus(text, tone = 'ok') {
+  // --- Settings dialog: one-time connection, downloads, import -------------------
+  function setConnectStatus(text, tone = 'ok') {
     if (!el.syncStatus) return;
     el.syncStatus.textContent = text;
     el.syncStatus.dataset.tone = tone;
-  }
-
-  function setSyncBusy(busy) {
-    [el.syncPush, el.syncPull].forEach((b) => { if (b) b.disabled = busy; });
   }
 
   function readSyncForm() {
@@ -2090,18 +2158,49 @@
     };
   }
 
-  function updateSyncBadge() {
-    if (!el.syncBadge) return;
-    const cfg = syncConfig();
-    const n = githubReady(cfg) ? dirtyMonths().length : 0;
-    el.syncBadge.hidden = n === 0;
-    el.syncBadge.textContent = String(n);
-    el.syncOpen.setAttribute('aria-label', n ? `Save and sync: ${plural(n, 'month')} not saved to GitHub` : 'Save and sync');
-    if (el.syncDirty) {
-      el.syncDirty.textContent = githubReady(cfg)
-        ? (n ? `${plural(n, 'month')} with changes not on GitHub yet.` : 'Everything is saved to GitHub.')
-        : '';
+  function updateConnectButtons() {
+    const connected = githubReady(syncConfig());
+    el.syncConnect.textContent = connected ? 'Reconnect' : 'Connect';
+    el.syncDisconnect.hidden = !connected;
+  }
+
+  async function connectGitHub() {
+    const cfg = readSyncForm();
+    if (!cfg.owner || !cfg.repo || !cfg.token) {
+      setConnectStatus('Fill in your GitHub username, the data repository and the token.', 'error');
+      return;
     }
+    el.syncConnect.disabled = true;
+    setConnectStatus(`Checking ${cfg.owner}/${cfg.repo}…`, 'busy');
+    try {
+      const res = await fetch(`https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`, { headers: ghHeaders(cfg), cache: 'no-store' });
+      if (res.status === 401) throw new Error(ghError(401));
+      if (res.status === 404) throw new Error(`Couldn’t find ${cfg.owner}/${cfg.repo}. Create it on GitHub as a private repository, and give the token access to it.`);
+      if (!res.ok) throw new Error(ghError(res.status));
+      const repo = await res.json();
+      storeSyncConfig(cfg);
+      updateConnectButtons();
+      setConnectStatus(repo.private
+        ? `Connected to ${repo.full_name} (private). Your entries now save automatically.`
+        : `Connected, but ${repo.full_name} is PUBLIC, so anyone can read your entries. Make it private in its GitHub settings.`,
+      repo.private ? 'ok' : 'error');
+      await pullRemote({ all: true });
+      await autoSave();
+      Scientist.react('connected');
+    } catch (err) {
+      setConnectStatus(err.message || 'Couldn’t reach GitHub. Check your connection.', 'error');
+    } finally {
+      el.syncConnect.disabled = false;
+    }
+  }
+
+  function disconnectGitHub() {
+    const cfg = syncConfig();
+    storeSyncConfig({ ...cfg, token: '' });
+    el.ghToken.value = '';
+    updateConnectButtons();
+    setSyncState('off');
+    setConnectStatus('Disconnected. Your entries stay in this browser; the copy on GitHub is untouched.', 'ok');
   }
 
   function openSyncDialog() {
@@ -2116,8 +2215,9 @@
     const pick = PAGE === 'journal' ? CURRENT_MONTH : (months.find((m) => m < CURRENT_MONTH) || CURRENT_MONTH);
     el.dlMonth.innerHTML = (months.length ? months : [CURRENT_MONTH])
       .map((m) => `<option value="${m}"${m === pick ? ' selected' : ''}>${esc(monthLabel(m))}</option>`).join('');
-    setSyncStatus('');
-    updateSyncBadge();
+    setConnectStatus('');
+    updateConnectButtons();
+    renderSyncState();
     el.syncDialog.showModal();
   }
 
@@ -2137,19 +2237,31 @@
       if (file) importFile(file);
       el.importFile.value = '';
     });
-    el.syncPush.addEventListener('click', pushToGitHub);
-    el.syncPull.addEventListener('click', async () => {
-      const cfg = readSyncForm();
-      storeSyncConfig(cfg);
-      setSyncBusy(true);
-      setSyncStatus('Loading from GitHub…', 'busy');
-      await pullRemote();
-      setSyncBusy(false);
-    });
-    [el.ghOwner, el.ghRepo, el.ghBranch, el.ghFolder, el.ghToken, el.ghRemember].forEach((input) => {
-      input.addEventListener('change', () => { storeSyncConfig(readSyncForm()); updateSyncBadge(); });
-    });
+    el.syncConnect.addEventListener('click', connectGitHub);
+    el.syncDisconnect.addEventListener('click', disconnectGitHub);
     el.monthDownloads.forEach((b) => b.addEventListener('click', () => downloadMonth(CURRENT_MONTH, b.dataset.monthDl)));
+  }
+
+  /** Start syncing once the page is up: load what's on GitHub, then save anything new. */
+  function startSync() {
+    sync.booted = true;
+    try { sync.lastSaved = Number(localStorage.getItem(LAST_SAVED_KEY)) || 0; } catch (err) { sync.lastSaved = 0; }
+    setInterval(() => { if (sync.status === 'saved') renderSyncState(); }, 30000); // keep “2 minutes ago” fresh
+    window.addEventListener('online', () => { if (githubReady(syncConfig())) pullRemote().then(() => autoSave()); });
+    window.addEventListener('offline', () => {
+      if (githubReady(syncConfig())) setSyncState('offline', 'Offline. Your changes will be saved to GitHub when you’re back online.');
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!githubReady(syncConfig())) return;
+      if (document.visibilityState === 'hidden') {
+        if (dirtyMonths().length) autoSave(); // leaving: save now rather than waiting
+      } else if (Date.now() - sync.lastPull > 60000) {
+        pullRemote(); // back again: pick up anything saved from another device
+      }
+    });
+    if (!githubReady(syncConfig())) { setSyncState('off'); return; }
+    setSyncState(dirtyMonths().length ? 'pending' : 'saved', 'Changes will be saved to GitHub in a moment…');
+    pullRemote().then(() => { if (dirtyMonths().length) autoSave(); });
   }
 
   /** What the owl or spider says when the page opens. */
@@ -2165,6 +2277,47 @@
       return `Hoo! New month. ${monthLabel(prefs.lastMonth)} is in the archive now.`;
     }
     return `Hoo! ${plural(scoped, 'entry')} so far in ${monthLabel(CURRENT_MONTH).split(' ')[0]}.`;
+  }
+
+  /** Something useful about your journal, for the characters to tell you when clicked. */
+  function journalTips(where) {
+    const tips = [];
+    const dayStart = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+    const month = monthLabel(CURRENT_MONTH).split(' ')[0];
+    const ideas = state.entries.filter((e) => e.type === 'idea' && (e.status || 'open') !== 'answered');
+    if (ideas.length) {
+      const pick = ideas[Math.floor(Math.random() * ideas.length)];
+      tips.push(`${plural(ideas.length, 'idea')} still open. “${shorten(pick.title, 46)}” is waiting for you.`);
+    }
+    const logs = state.entries.filter((e) => e.type === 'log').sort((a, b) => entryTime(b) - entryTime(a));
+    if (!logs.length) {
+      tips.push('No daily log yet. Jot down what you did today?');
+    } else {
+      const days = Math.round((dayStart(Date.now()) - dayStart(entryTime(logs[0]))) / 86400000);
+      tips.push(days <= 0 ? 'You’ve logged today. Nice and consistent!' : `Your last daily log was ${plural(days, 'day')} ago.`);
+    }
+    const papers = state.entries.filter((e) => e.type === 'paper' && monthOf(e) === CURRENT_MONTH).length;
+    tips.push(papers ? `${plural(papers, 'paper')} read in ${month} so far.` : `No papers yet in ${month}. Paste a DOI to add one.`);
+    const idx = buildLinkIndex();
+    const links = (e) => new Set([...(idx.out.get(e.id) || []), ...(idx.inc.get(e.id) || [])]).size;
+    const lonely = state.entries.filter((e) => links(e) === 0);
+    if (lonely.length) tips.push(`“${shorten(lonely[0].title, 42)}” isn’t linked to anything yet. Type [[ in a note to connect it.`);
+    const best = state.entries.reduce((top, e) => (links(e) > (top ? links(top) : 1) ? e : top), null);
+    if (best) tips.push(`“${shorten(best.title, 42)}” is your most connected entry, with ${plural(links(best), 'link')}.`);
+    if (where === 'archive') {
+      const archived = state.entries.filter((e) => monthOf(e) < CURRENT_MONTH).sort((a, b) => entryTime(a) - entryTime(b));
+      tips.push(archived.length
+        ? `Your oldest entry is from ${monthLabel(monthOf(archived[0]))}: “${shorten(archived[0].title, 38)}”.`
+        : 'Nothing archived yet. Finished months will land in my web.');
+    }
+    return tips;
+  }
+
+  let lastTip = '';
+  function pickTip(where) {
+    const tips = journalTips(where).filter((t) => t !== lastTip);
+    lastTip = tips[Math.floor(Math.random() * tips.length)] || 'Keep going!';
+    return lastTip;
   }
 
   /* ---------- 8. Characters ---------- */
@@ -2205,19 +2358,135 @@
     bubble.style.setProperty('--shift', `${shift}px`);
   }
 
-  /** Dr. Pip walks the bottom edge below the cards: reads, cheers on saves, points at new links, dozes off. */
+  // --- shared interaction helpers -------------------------------------------------
+  // Where the mouse is, so eyes can follow it. Touch has no hover, so eyes simply look ahead there.
+  const pointer = { x: 0, y: 0, active: false };
+  window.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    pointer.x = e.clientX;
+    pointer.y = e.clientY;
+    pointer.active = true;
+  }, { passive: true });
+  document.addEventListener('mouseout', (e) => { if (!e.relatedTarget) pointer.active = false; });
+
+  /** Nudge pupils toward the pointer: `eyes` = { els, key }, measured from the eyes' screen position. */
+  function lookAt(eyes, fromX, fromY, reach, mirror = 1) {
+    let dx = 0;
+    let dy = 0;
+    if (pointer.active) {
+      const vx = pointer.x - fromX;
+      const vy = pointer.y - fromY;
+      const d = Math.hypot(vx, vy) || 1;
+      const k = Math.min(1, d / 140); // full glance once the pointer is a little way off
+      dx = (vx / d) * reach * k * mirror;
+      dy = (vy / d) * reach * k;
+    }
+    const key = `${dx.toFixed(2)},${dy.toFixed(2)}`;
+    if (eyes.key === key) return;
+    eyes.key = key;
+    eyes.els.forEach((n) => { n.style.transform = `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px)`; });
+  }
+
+  /** Briefly add a class for a reaction (a hop, a squint, a wiggle). */
+  function pulse(node, cls, ms) {
+    node.classList.remove(cls);
+    void node.getBoundingClientRect(); // restart its animation
+    node.classList.add(cls);
+    clearTimeout(node[`_${cls}`]);
+    node[`_${cls}`] = setTimeout(() => node.classList.remove(cls), ms);
+  }
+
+  /** Press and drag a character around; a plain click still counts as a click. */
+  function makeDraggable(handle, { onStart, onMove, onDrop }) {
+    let drag = null;
+    let justDragged = false;
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      drag = { id: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false };
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* pointer already gone */ }
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (!drag.moved) {
+        if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 6) return;
+        drag.moved = true;
+        handle.classList.add('is-dragging');
+        onStart(e.clientX, e.clientY);
+      }
+      onMove(e.clientX, e.clientY);
+    });
+    const end = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (drag.moved) {
+        justDragged = true;
+        handle.classList.remove('is-dragging');
+        onDrop(e.clientX, e.clientY);
+        setTimeout(() => { justDragged = false; }, 0);
+      }
+      drag = null;
+    };
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+    handle.addEventListener('click', (e) => {
+      if (justDragged) { e.stopImmediatePropagation(); e.preventDefault(); }
+    }, true);
+  }
+
+  /** Notice the mouse arriving, and spot a back-and-forth rub (a tickle). */
+  function watchHover(handle, { onNotice, onTickle }) {
+    let lastX = null;
+    let lastDir = 0;
+    let flips = [];
+    let noticeAt = 0;
+    let tickleAt = 0;
+    handle.addEventListener('pointerenter', (e) => {
+      if (e.pointerType !== 'mouse' || e.buttons) return;
+      const now = performance.now();
+      if (now - noticeAt > 5000) { noticeAt = now; onNotice(); }
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse' || e.buttons) return;
+      const now = performance.now();
+      if (lastX !== null) {
+        const dir = Math.sign(e.clientX - lastX);
+        if (dir && dir !== lastDir) { flips.push(now); lastDir = dir; }
+      }
+      lastX = e.clientX;
+      flips = flips.filter((t) => now - t < 1200);
+      if (flips.length >= 5 && now - tickleAt > 4000) {
+        tickleAt = now;
+        flips = [];
+        onTickle();
+      }
+    });
+    handle.addEventListener('pointerleave', () => { lastX = null; });
+  }
+
+  /**
+   * Dr. Pip walks the bottom edge below the cards. Reads, cheers on saves, points at new links and dozes off.
+   * You can wave hello (hover), tickle (rub), pick him up and drop him (drag), or ask for a tip (click).
+   */
   const Scientist = (() => {
     const root = $('#scientist');
     const flip = $('.char-flip', root);
     const bubble = $('.char-bubble', root);
     const button = $('.char-hit', root);
+    const eyes = { els: $$('.eyes', root), key: '' };
     const SPEED = { walk: 66, hurry: 180 };
-    const me = { x: -50, tx: 0, v: 0, facing: 1, moving: false, pace: 'walk', onArrive: null, state: 'walking', sleeping: false };
+    const GRAVITY = 2400;
+    const me = {
+      x: -50, y: 0, tx: 0, v: 0, vy: 0, facing: 1, moving: false, pace: 'walk', onArrive: null,
+      state: 'walking', sleeping: false, carried: false, falling: false, dropFrom: 0,
+    };
     let ready = false;
     let idleTimer = 0;
     let bubbleTimer = 0;
+    let lastSaveCheer = 0;
+    let lastWorry = 0;
 
+    const ground = () => window.innerHeight - 4;
     const panelBeside = () => window.innerWidth >= 960 && document.body.classList.contains('map-open');
+    const free = () => ready && !me.carried && !me.falling;
 
     function range() {
       if (window.innerWidth >= 960) {
@@ -2255,7 +2524,7 @@
     }
 
     function nextIdle() {
-      if (me.sleeping) return;
+      if (me.sleeping || !free()) return;
       const r = range();
       if (Math.random() < 0.65) {
         let x = me.x;
@@ -2274,18 +2543,25 @@
       bubbleTimer = setTimeout(() => bubble.classList.remove('is-visible'), ms);
     }
 
-    function cheer(text) {
-      if (!ready) return;
+    /** A short pose (wave, think, worry…) before going back to idling. */
+    function pose(name, ms, text) {
+      if (!free()) return;
       wake(true);
       me.moving = false;
-      setState('cheering');
-      if (text) { say(text, 2800); announce(text); }
-      scheduleIdle(2400);
+      setState(name);
+      if (text) say(text, Math.max(ms, 2600));
+      scheduleIdle(ms);
+    }
+
+    function cheer(text) {
+      if (!free()) { if (text) say(text, 2800); return; }
+      pose('cheering', 2400, text);
+      if (text) announce(text);
     }
 
     /** Hurry to the edge nearest the connections panel and point at it; cheer if it's closed. */
     function pointAtMap(text) {
-      if (!ready) return;
+      if (!free()) return;
       wake(true);
       if (!panelBeside()) { cheer(text); return; }
       announce(text);
@@ -2299,7 +2575,7 @@
 
     /** Stroll under an element (the entry form) and read along. */
     function watch(target) {
-      if (!ready || !target) return;
+      if (!free() || !target) return;
       wake(true);
       const r = target.getBoundingClientRect();
       const x = clamp(r.left + r.width * 0.82, range().min, range().max);
@@ -2310,8 +2586,22 @@
       walkTo(x, 'walk', () => read(7000));
     }
 
+    /** How the scientist responds to GitHub syncing. */
+    function react(kind) {
+      const now = Date.now();
+      if (kind === 'saved' && now - lastSaveCheer > 90000) { // not on every save: once in a while is enough
+        lastSaveCheer = now;
+        cheer('Saved to GitHub!');
+      } else if (kind === 'error' && now - lastWorry > 120000) {
+        lastWorry = now;
+        pose('worried', 3200, 'Hmm, GitHub isn’t answering. I’ll keep trying.');
+      } else if (kind === 'connected') {
+        cheer('Connected! Your notes are safe on GitHub.');
+      }
+    }
+
     function sleep() {
-      if (me.sleeping) return;
+      if (me.sleeping || !free()) return;
       me.sleeping = true;
       me.moving = false;
       clearTimeout(idleTimer);
@@ -2337,39 +2627,99 @@
       return 'Burning the midnight oil?';
     }
 
+    function land() {
+      me.falling = false;
+      me.vy = 0;
+      me.y = ground();
+      const fell = ground() - me.dropFrom;
+      setState('reading');
+      say(fell > 240 ? 'Oof! Gentle, please.' : pick(['Thanks for the lift!', 'Ah, a new spot.', 'Nice view from up there.']), 2600);
+      const r = range();
+      if (me.x < r.min || me.x > r.max) walkTo(me.x, 'walk', () => read(4000)); // walk back under the cards
+      else scheduleIdle(4000);
+    }
+
     function tick(dt) {
-      if (me.moving) {
-        if (reduceMotion.matches) me.x = me.tx; // arrive at once
-        const dx = me.tx - me.x;
-        const dist = Math.abs(dx);
-        me.v += (SPEED[me.pace] - me.v) * Math.min(1, dt * 3);
-        const step = Math.min(me.v, dist * 3 + 20) * dt;
-        if (dist > 1) me.facing = dx > 0 ? 1 : -1;
-        if (dist <= Math.max(step, 1)) {
-          me.x = me.tx;
-          me.moving = false;
-          me.v = 0;
-          const done = me.onArrive;
-          me.onArrive = null;
-          if (done) done(); else read(4000);
-        } else {
-          me.x += Math.sign(dx) * step;
+      if (me.carried) {
+        // position comes from the drag
+      } else if (me.falling) {
+        if (reduceMotion.matches) { land(); } else {
+          me.vy += GRAVITY * dt;
+          me.y += me.vy * dt;
+          if (me.y >= ground()) {
+            if (me.vy > 520) { me.y = ground(); me.vy = -me.vy * 0.28; } // a little bounce
+            else land();
+          }
         }
-      } else if (!me.sleeping) {
-        const r = range(); // stay under the cards when the layout changes
-        if (me.x < r.min - 1 || me.x > r.max + 1) me.x += (clamp(me.x, r.min, r.max) - me.x) * Math.min(1, dt * 6);
+      } else {
+        me.y = ground();
+        if (me.moving) {
+          if (reduceMotion.matches) me.x = me.tx; // arrive at once
+          const dx = me.tx - me.x;
+          const dist = Math.abs(dx);
+          me.v += (SPEED[me.pace] - me.v) * Math.min(1, dt * 3);
+          const step = Math.min(me.v, dist * 3 + 20) * dt;
+          if (dist > 1) me.facing = dx > 0 ? 1 : -1;
+          if (dist <= Math.max(step, 1)) {
+            me.x = me.tx;
+            me.moving = false;
+            me.v = 0;
+            const done = me.onArrive;
+            me.onArrive = null;
+            if (done) done(); else read(4000);
+          } else {
+            me.x += Math.sign(dx) * step;
+          }
+        } else if (!me.sleeping) {
+          const r = range(); // stay under the cards when the layout changes
+          if (me.x < r.min - 1 || me.x > r.max + 1) me.x += (clamp(me.x, r.min, r.max) - me.x) * Math.min(1, dt * 6);
+        }
       }
-      root.style.transform = `translate3d(${me.x.toFixed(1)}px, ${window.innerHeight - 4}px, 0)`;
+      root.style.transform = `translate3d(${me.x.toFixed(1)}px, ${me.y.toFixed(1)}px, 0)`;
       flip.style.transform = `scaleX(${me.facing})`;
+      if (!me.sleeping) lookAt(eyes, me.x + 4 * me.facing, me.y - 66, 1.7, me.facing);
       if (bubble.classList.contains('is-visible')) bubbleShift(bubble, me.x);
     }
 
     function init() {
       ready = true;
+      me.y = ground();
       button.addEventListener('click', () => {
         if (me.sleeping) { wake(false); return; }
-        const lines = ['Correlation is not causation!', 'Have you backed up your data?', 'Cite your sources!', 'Ooh, interesting.', 'One more paper, then coffee.'];
-        cheer(lines[Math.floor(Math.random() * lines.length)]);
+        pose('thinking', 4600, pickTip(PAGE));
+      });
+      watchHover(button, {
+        onNotice: () => {
+          if (me.sleeping || me.moving || !free()) return;
+          pose('waving', 1600, Math.random() < 0.5 ? pick(['Oh, hi!', 'Hello there!', 'Need a hand?']) : '');
+        },
+        onTickle: () => {
+          if (me.sleeping) { wake(false); return; }
+          pose('tickled', 1800, pick(['Hey, that tickles!', 'Ha! Stop it!', 'Hee hee, I’m working!']));
+        },
+      });
+      makeDraggable(button, {
+        onStart: () => {
+          me.sleeping = false;
+          me.moving = false;
+          me.falling = false;
+          me.carried = true;
+          clearTimeout(idleTimer);
+          setState('carried');
+          say(pick(['Whoa! Where are we going?', 'Up we go!', 'Careful with the clipboard!']), 2400);
+        },
+        onMove: (x, y) => {
+          if (Math.abs(x - me.x) > 0.5) me.facing = x > me.x ? 1 : -1;
+          me.x = clamp(x, 30, window.innerWidth - 30);
+          me.y = Math.min(ground(), y + 82); // held by the head
+        },
+        onDrop: () => {
+          me.carried = false;
+          me.falling = true;
+          me.vy = 0;
+          me.dropFrom = me.y;
+          setState('falling');
+        },
       });
       const r = range();
       me.x = -50;
@@ -2380,16 +2730,24 @@
       });
     }
 
-    return { init, tick, say, cheer, pointAtMap, watch, sleep, wake, busy: () => me.moving };
+    return { init, tick, say, cheer, pointAtMap, watch, react, sleep, wake, busy: () => me.moving || me.carried || me.falling };
   })();
 
-  /** Minerva the owl perches in the header and flies down to whichever card or map node you open. */
+  function pick(list) {
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  /**
+   * Minerva the owl perches in the header and flies down to whichever card or map node you open.
+   * Hover for a happy squint, rub for a giggle, click for a tip, or carry her onto a card to keep watch there.
+   */
   const Owl = (() => {
     const root = $('#owl');
     if (!root) return null;
     const bubble = $('.char-bubble', root);
     const button = $('.char-hit', root);
-    const me = { x: 0, y: 0, tilt: 0, state: 'perched', flight: null, anchor: null, sleeping: false };
+    const eyes = { els: $$('.owl-pupil, .owl-glint', root), key: '' };
+    const me = { x: 0, y: 0, tilt: 0, state: 'perched', flight: null, anchor: null, sleeping: false, carried: false };
     let ready = false;
     let homeTimer = 0;
     let bubbleTimer = 0;
@@ -2426,31 +2784,32 @@
       const target = getPoint();
       if (!target) return false;
       const dist = Math.hypot(target.x - from.x, target.y - from.y);
-      me.flight = { from, getPoint, onLand, t0: performance.now(), dur: clamp(dist * 1.4, 500, 1300) };
+      me.flight = { from, getPoint, onLand, t0: performance.now(), dur: clamp(dist * 1.4, 450, 1300) };
       setState('flying');
       return true;
     }
 
-    function landOn(target) {
-      if (!ready || !target) return;
+    function landOn(target, ms = 10000) {
+      if (!ready || !target || me.carried) return false;
       if (me.sleeping) wake(true);
       clearTimeout(homeTimer);
       if (me.anchor === target && me.state === 'landed') {
-        homeTimer = setTimeout(goHome, 10000);
-        return;
+        homeTimer = setTimeout(goHome, ms);
+        return true;
       }
       me.anchor = target;
       const ok = flyTo(() => landingPoint(target), () => {
         setState('landed');
-        homeTimer = setTimeout(goHome, 10000);
+        homeTimer = setTimeout(goHome, ms);
       });
       if (!ok) me.anchor = null;
+      return ok;
     }
 
     function goHome() {
       clearTimeout(homeTimer);
       me.anchor = null;
-      if (me.state === 'perched' || me.state === 'sleeping') return;
+      if (me.state === 'perched' || me.state === 'sleeping' || me.carried) return;
       flyTo(perchPoint, () => setState(me.sleeping ? 'sleeping' : 'perched'));
     }
 
@@ -2463,7 +2822,7 @@
     }
 
     function sleep() {
-      if (me.sleeping) return;
+      if (me.sleeping || me.carried) return;
       me.sleeping = true;
       clearTimeout(homeTimer);
       bubble.classList.remove('is-visible');
@@ -2479,8 +2838,18 @@
       if (me.anchor) homeTimer = setTimeout(goHome, 6000);
     }
 
+    /** The card (or map node) under a point, ignoring the owl itself. */
+    function targetAt(x, y) {
+      const hit = document.elementsFromPoint(x, y).find((n) => !root.contains(n) && n.closest && (n.closest('.gnode') || n.closest('.card')));
+      if (!hit) return null;
+      const node = hit.closest('.gnode');
+      return node ? { el: node.querySelector('.gnode-dot'), id: node.dataset.id } : { el: hit.closest('.card'), id: hit.closest('.card').dataset.id };
+    }
+
     function tick(now) {
-      if (me.flight) {
+      if (me.carried) {
+        // position comes from the drag
+      } else if (me.flight) {
         const f = me.flight;
         let p = f.getPoint();
         if (!p) { // target scrolled away mid-flight: head home instead
@@ -2511,9 +2880,10 @@
         me.x = p.x;
         me.y = p.y;
       }
-      if (!me.flight) me.tilt *= 0.85;
+      if (!me.flight && !me.carried) me.tilt *= 0.85;
       root.style.setProperty('--tilt', `${me.tilt.toFixed(2)}deg`);
       root.style.transform = `translate3d(${me.x.toFixed(1)}px, ${me.y.toFixed(1)}px, 0)`;
+      if (!me.sleeping) lookAt(eyes, me.x, me.y - 29, 2.2);
       if (bubble.classList.contains('is-visible')) bubbleShift(bubble, me.x);
     }
 
@@ -2525,24 +2895,55 @@
       setState('perched');
       button.addEventListener('click', () => {
         if (me.sleeping) { wake(false); return; }
-        const papers = state.entries.filter((e) => e.type === 'paper').length;
-        const ideas = state.entries.filter((e) => e.type === 'idea' && e.status !== 'answered').length;
-        const lines = [
-          `Hoo! ${plural(papers, 'paper')} read so far.`,
-          `Hoo! ${plural(ideas, 'open idea')} waiting for you.`,
-          'Hoo! Have you written today’s log?',
-        ];
-        say(lines[Math.floor(Math.random() * lines.length)], 2800);
+        pulse(root, 'is-hop', 600);
+        say(`Hoo! ${pickTip('journal')}`, 4400);
+      });
+      watchHover(button, {
+        onNotice: () => { if (!me.sleeping) pulse(root, 'is-happy', 1400); },
+        onTickle: () => {
+          if (me.sleeping) { wake(false); return; }
+          pulse(root, 'is-tickled', 1600);
+          say(pick(['Hoo-hoo! That tickles!', 'Ruffling my feathers, are we?', 'Hoo! Careful, I just preened.']), 2600);
+        },
+      });
+      makeDraggable(button, {
+        onStart: () => {
+          me.sleeping = false;
+          me.carried = true;
+          me.flight = null;
+          me.anchor = null;
+          clearTimeout(homeTimer);
+          setState('carried');
+        },
+        onMove: (x, y) => {
+          me.tilt = clamp((x - me.x) * 1.5, -18, 18);
+          me.x = x;
+          me.y = y + 30;
+        },
+        onDrop: (x, y) => {
+          me.carried = false;
+          const target = targetAt(x, y);
+          if (target && landOn(target.el, 20000)) {
+            const entry = byId(target.id);
+            say(entry ? `Hoo! I’ll keep an eye on “${shorten(entry.title, 36)}”.` : 'Hoo! I’ll keep watch here.', 3200);
+          } else {
+            setState('flying');
+            me.flight = null;
+            flyTo(perchPoint, () => setState('perched'));
+            say('Hoo! Back to my branch.', 2200);
+          }
+        },
       });
       setTimeout(() => say(state.greeting, 3800), 2600);
     }
 
-    return { init, tick, landOn, goHome, say, sleep, wake, busy: () => Boolean(me.flight || me.anchor || (me.path && me.path.length)) };
+    return { init, tick, landOn, goHome, say, sleep, wake, busy: () => Boolean(me.flight || me.anchor || me.carried) };
   })();
 
   /**
    * Kip the spider keeps the archive. It hangs from a silk thread under the header, climbs up and scuttles
    * along the top to reach a card, lowers itself onto what you open, and spins its web when idle.
+   * Pull it down by its thread and let go to watch it spring back; click for a fact about your archive.
    */
   const Spider = (() => {
     const root = $('#spider');
@@ -2551,9 +2952,10 @@
     const web = $('#spider-web');
     const bubble = $('.char-bubble', root);
     const button = $('.char-hit', root);
+    const eyes = { els: $$('.spider-pupil, .spider-glint', root), key: '' };
     const SPEED = { climbing: 230, walking: 210, descending: 290 };
     const BODY_H = 45; // svg height on screen; the thread meets its top centre
-    const me = { x: 0, y: 0, path: [], onArrive: null, anchor: null, sleeping: false, state: 'hanging' };
+    const me = { x: 0, y: 0, path: [], onArrive: null, anchor: null, sleeping: false, state: 'hanging', carried: false, spring: null };
     let ready = false;
     let homeTimer = 0;
     let idleTimer = 0;
@@ -2601,6 +3003,7 @@
     /** Spiders travel by thread: climb to the top, scuttle across, then lower down. */
     function travelTo(point, onArrive) {
       clearTimeout(idleTimer);
+      me.spring = null;
       const top = ceilingY() + BODY_H - 4;
       const path = [];
       if (Math.abs(point.x - me.x) > 4) {
@@ -2614,14 +3017,18 @@
       setState(path[0].mode);
     }
 
+    function spin() {
+      setState('spinning');
+      web.classList.remove('is-spinning');
+      void web.getBoundingClientRect(); // restart the drawing animation
+      web.classList.add('is-spinning');
+    }
+
     function scheduleIdle(ms) {
       clearTimeout(idleTimer);
       idleTimer = setTimeout(() => {
-        if (me.sleeping || me.anchor || me.path.length) return;
-        setState('spinning');
-        web.classList.remove('is-spinning');
-        void web.getBoundingClientRect(); // restart the drawing animation
-        web.classList.add('is-spinning');
+        if (me.sleeping || me.anchor || me.path.length || me.carried || me.spring) return;
+        spin();
         idleTimer = setTimeout(() => {
           if (me.state === 'spinning') setState('hanging');
           scheduleIdle(rnd(10000, 16000));
@@ -2639,7 +3046,7 @@
     }
 
     function landOn(target) {
-      if (!ready || !target) return;
+      if (!ready || !target || me.carried) return;
       if (me.sleeping) wake(true);
       clearTimeout(homeTimer);
       if (me.anchor === target && me.state === 'landed') {
@@ -2664,7 +3071,7 @@
     }
 
     function sleep() {
-      if (me.sleeping) return;
+      if (me.sleeping || me.carried) return;
       me.sleeping = true;
       clearTimeout(homeTimer);
       clearTimeout(idleTimer);
@@ -2682,54 +3089,77 @@
     }
 
     function tick(now, dt) {
-      // Follow the card or node we're heading to (or sitting on) as it scrolls.
-      if (me.anchor) {
-        const p = landingPoint(me.anchor);
-        if (!p) {
-          goHome();
-        } else if (me.path.length) {
-          const last = me.path[me.path.length - 1];
-          last.x = p.x;
-          last.y = p.y;
-          if (me.path.length > 1) me.path[me.path.length - 2].x = p.x;
+      if (me.carried) {
+        // position comes from the drag
+      } else if (me.spring) {
+        // Let go after a pull: bob back up to rest like a yo-yo on its thread.
+        const h = home();
+        if (reduceMotion.matches) {
+          me.x = h.x;
+          me.y = h.y;
+          me.spring = null;
         } else {
-          const k = Math.min(1, dt * 12);
-          me.x += (p.x - me.x) * k;
-          me.y += (p.y - me.y) * k;
+          const a = -55 * (me.y - h.y) - 6.5 * me.spring.vy;
+          me.spring.vy += a * dt;
+          me.y += me.spring.vy * dt;
+          me.x += (h.x - me.x) * Math.min(1, dt * 3);
+          if (Math.abs(me.y - h.y) < 0.6 && Math.abs(me.spring.vy) < 8 && Math.abs(me.x - h.x) < 1) me.spring = null;
         }
-      }
-
-      if (me.path.length) {
-        const wp = me.path[0];
-        if (me.state !== wp.mode) setState(wp.mode);
-        const dx = wp.x - me.x;
-        const dy = wp.y - me.y;
-        const dist = Math.hypot(dx, dy);
-        const step = reduceMotion.matches ? Infinity : Math.min(SPEED[wp.mode], dist * 5 + 50) * dt; // eases into each stop
-        if (dist <= step) {
-          me.x = wp.x;
-          me.y = wp.y;
-          me.path.shift();
-          if (!me.path.length) {
-            const done = me.onArrive;
-            me.onArrive = null;
-            if (done) done();
-            if (me.sleeping) setState('sleeping');
+        if (!me.spring) {
+          setState('hanging');
+          scheduleIdle(rnd(5000, 9000));
+        }
+      } else {
+        // Follow the card or node we're heading to (or sitting on) as it scrolls.
+        if (me.anchor) {
+          const p = landingPoint(me.anchor);
+          if (!p) {
+            goHome();
+          } else if (me.path.length) {
+            const last = me.path[me.path.length - 1];
+            last.x = p.x;
+            last.y = p.y;
+            if (me.path.length > 1) me.path[me.path.length - 2].x = p.x;
+          } else {
+            const k = Math.min(1, dt * 12);
+            me.x += (p.x - me.x) * k;
+            me.y += (p.y - me.y) * k;
           }
-        } else {
-          me.x += (dx / dist) * step;
-          me.y += (dy / dist) * step;
         }
-      } else if (!me.anchor) {
-        const h = home(); // stay under the web through resizes
-        me.x += (h.x - me.x) * Math.min(1, dt * 4);
-        me.y += (h.y - me.y) * Math.min(1, dt * 4);
+
+        if (me.path.length) {
+          const wp = me.path[0];
+          if (me.state !== wp.mode) setState(wp.mode);
+          const dx = wp.x - me.x;
+          const dy = wp.y - me.y;
+          const dist = Math.hypot(dx, dy);
+          const step = reduceMotion.matches ? Infinity : Math.min(SPEED[wp.mode], dist * 5 + 50) * dt; // eases into each stop
+          if (dist <= step) {
+            me.x = wp.x;
+            me.y = wp.y;
+            me.path.shift();
+            if (!me.path.length) {
+              const done = me.onArrive;
+              me.onArrive = null;
+              if (done) done();
+              if (me.sleeping) setState('sleeping');
+            }
+          } else {
+            me.x += (dx / dist) * step;
+            me.y += (dy / dist) * step;
+          }
+        } else if (!me.anchor) {
+          const h = home(); // stay under the web through resizes
+          me.x += (h.x - me.x) * Math.min(1, dt * 4);
+          me.y += (h.y - me.y) * Math.min(1, dt * 4);
+        }
       }
 
       const top = ceilingY();
       const length = Math.max(0, me.y - BODY_H + 4 - top);
       thread.style.transform = `translate3d(${(me.x - 0.75).toFixed(1)}px, ${top.toFixed(1)}px, 0) scaleY(${length.toFixed(1)})`;
       root.style.transform = `translate3d(${me.x.toFixed(1)}px, ${me.y.toFixed(1)}px, 0)`;
+      if (!me.sleeping) lookAt(eyes, me.x, me.y - 20, 1.7);
       if (bubble.classList.contains('is-visible')) bubbleShift(bubble, me.x);
     }
 
@@ -2748,12 +3178,44 @@
       });
       button.addEventListener('click', () => {
         if (me.sleeping) { wake(false); return; }
-        const lines = ['I keep every thread.', 'Old notes, still connected.', 'Dusty? Never. Archived.', 'Psst… try the Connections button.'];
-        say(lines[Math.floor(Math.random() * lines.length)], 2600);
+        if (!me.path.length && !me.anchor) spin();
+        say(pickTip('archive'), 4600);
+        scheduleIdle(9000);
+      });
+      watchHover(button, {
+        onNotice: () => { if (!me.sleeping) pulse(root, 'is-wiggle', 1000); },
+        onTickle: () => {
+          if (me.sleeping) { wake(false); return; }
+          pulse(root, 'is-tickled', 1600);
+          say(pick(['Eight legs, all ticklish!', 'Hee! My knees!', 'Stop, I’ll drop my thread!']), 2600);
+        },
+      });
+      makeDraggable(button, {
+        onStart: () => {
+          me.sleeping = false;
+          me.carried = true;
+          me.path = [];
+          me.anchor = null;
+          me.spring = null;
+          clearTimeout(homeTimer);
+          clearTimeout(idleTimer);
+          setState('dangling');
+        },
+        onMove: (x, y) => {
+          me.x = clamp(x, 30, window.innerWidth - 30);
+          me.y = clamp(y + 22, ceilingY() + BODY_H, window.innerHeight - 20);
+        },
+        onDrop: () => {
+          me.carried = false;
+          const pulled = me.y - home().y;
+          me.spring = { vy: 0 };
+          setState('hanging');
+          if (pulled > 120) say(pick(['Boing!', 'Wheee!', 'Sproing!']), 1800);
+        },
       });
     }
 
-    return { init, tick, landOn, goHome, say, sleep, wake, busy: () => Boolean(me.flight || me.anchor || (me.path && me.path.length)) };
+    return { init, tick, landOn, goHome, say, sleep, wake, busy: () => Boolean(me.path.length || me.anchor || me.carried || me.spring) };
   })();
 
   /** Each page has one guide: the owl on this month's page, the spider in the archive. */
@@ -3032,7 +3494,7 @@
     startCharacters();
     openFromHash();
     window.addEventListener('hashchange', openFromHash);
-    pullRemote({ quiet: true }); // pick up months saved to GitHub from another computer
+    startSync(); // load from your private GitHub repo, then keep saving to it automatically
   }
 
   boot();
