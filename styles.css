@@ -7,6 +7,13 @@
                       9. Pages, months, Save & sync
    ========================================================= */
 
+/* ---------- 0. JetBrains Mono, self-hosted (SIL Open Font License, see fonts/JetBrainsMono-OFL.txt) ---------- */
+@font-face { font-family: 'JetBrains Mono'; src: url('fonts/JetBrainsMono-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url('fonts/JetBrainsMono-Italic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url('fonts/JetBrainsMono-Medium.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url('fonts/JetBrainsMono-SemiBold.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url('fonts/JetBrainsMono-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+
 /* ---------- 1. Tokens ---------- */
 :root {
   --bg: #FBFAF7;
@@ -35,7 +42,7 @@
   --edge: #4C4A43;
 
   --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
-  --sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sans: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; /* the site's text font */
   --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
   --header-h: 68px;
@@ -57,8 +64,8 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--sans);
-  font-size: 16px;
-  line-height: 1.55;
+  font-size: 15px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -200,7 +207,7 @@ body.map-open .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
   line-height: 1.08;
   letter-spacing: -.02em;
 }
-.lede { max-width: 56ch; color: var(--muted); font-size: 17px; }
+.lede { max-width: 62ch; color: var(--muted); font-size: 15.5px; line-height: 1.65; }
 
 .controls { display: grid; gap: 18px; margin-bottom: 22px; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -538,7 +545,7 @@ body.map-open .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
 
 .card-excerpt {
   color: #3F3D38;
-  font-size: 15px;
+  font-size: 14px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -565,7 +572,7 @@ body.map-open .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
   border-radius: 12px;
   background: rgba(255, 255, 255, .72);
 }
-.prose { font-size: 16px; line-height: 1.7; }
+.prose { font-size: 15px; line-height: 1.75; }
 .prose p + p { margin-top: 12px; }
 .prose .empty { color: var(--muted); font-style: italic; }
 

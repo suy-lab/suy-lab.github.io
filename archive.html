@@ -7,10 +7,12 @@
   <meta name="description" content="Every earlier month of the research journal: papers, ideas and daily logs, still linked.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Variable weight ranges (fewer files), loaded without blocking the first paint -->
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Instrument+Sans:wght@400..600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Instrument+Sans:wght@400..600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;family=Instrument+Sans:wght@400..600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"></noscript>
+  <!-- Body text: JetBrains Mono, served from fonts/ -->
+  <link rel="preload" as="font" type="font/woff2" href="fonts/JetBrainsMono-Regular.woff2" crossorigin>
+  <!-- Titles: Newsreader (variable weights), loaded without blocking the first paint -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400&amp;display=swap"></noscript>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body data-page="archive">
