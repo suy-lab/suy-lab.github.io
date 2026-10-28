@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>log · anotetoself research journal</title>
+<meta name="description" content="Research log: every timestamped note, searchable and linked to your ideas." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 L14.8 8.6 L22 9.3 L16.5 14 L18.2 21 L12 17.3 L5.8 21 L7.5 14 L2 9.3 L9.2 8.6Z' fill='%23f5d6a0' stroke='%232b2b2b' stroke-width='1.6'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Patrick+Hand&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/journal.css" />
+</head>
+<body>
+
+<main class="page" id="page" data-page="log" data-title="RESEARCH LOG">
+  <div class="split">
+    <div class="sticky">
+      <form class="card sketch press compose" id="logForm" autocomplete="off">
+        <label class="field-label" for="logText" style="font-size:22px;color:var(--ink)">log it 📓</label>
+        <textarea class="paper-input" id="logText" maxlength="2000" placeholder="what happened? what did you try, read, notice?"></textarea>
+        <div class="moods" role="group" aria-label="Mood (optional)">
+          <span class="lbl">mood:</span>
+          <button type="button" class="mood press" data-mood="🙂" aria-pressed="false" aria-label="good">🙂</button>
+          <button type="button" class="mood press" data-mood="😌" aria-pressed="false" aria-label="calm">😌</button>
+          <button type="button" class="mood press" data-mood="😵‍💫" aria-pressed="false" aria-label="overwhelmed">😵‍💫</button>
+          <button type="button" class="mood press" data-mood="😴" aria-pressed="false" aria-label="tired">😴</button>
+          <button type="button" class="mood press" data-mood="🔥" aria-pressed="false" aria-label="motivated">🔥</button>
+        </div>
+        <label class="sr-only" for="logIdea">About an idea (optional)</label>
+        <select class="select" id="logIdea" style="width:100%;margin-bottom:12px"></select>
+        <div class="compose-foot">
+          <span class="hint"><kbd>ctrl</kbd> + <kbd>enter</kbd> to save</span>
+          <button type="submit" class="btn sketch press" id="logBtn">save entry ★</button>
+        </div>
+      </form>
+
+      <section class="card sketch press needs" aria-label="Filters">
+        <h2>find things 🔍</h2>
+        <label class="search">
+          <svg width="18" height="18" aria-hidden="true"><use href="#i-search"/></svg>
+          <span class="sr-only">Search the log</span>
+          <input type="search" id="logSearch" placeholder="search the log…" />
+        </label>
+        <span class="field-label">month</span>
+        <div class="chips" id="monthChips"></div>
+        <label class="field-label" for="filterIdea">idea</label>
+        <select class="select" id="filterIdea" style="width:100%"></select>
+      </section>
+    </div>
+
+    <article class="card sketch feed" aria-labelledby="logTitle" style="--sh-lift:var(--sh)">
+      <div class="card-head">
+        <h2 id="logTitle">where i'm at</h2>
+        <span class="pill" id="logCount"></span>
+      </div>
+      <div id="logGroups" aria-live="polite"></div>
+    </article>
+  </div>
+</main>
+
+<script src="assets/core.js"></script>
+<script src="assets/log.js"></script>
+</body>
+</html>

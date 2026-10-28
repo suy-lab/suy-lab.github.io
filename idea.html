@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>idea · anotetoself research journal</title>
+<meta name="description" content="An idea file: hypothesis, open questions, research notes and sources." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 L14.8 8.6 L22 9.3 L16.5 14 L18.2 21 L12 17.3 L5.8 21 L7.5 14 L2 9.3 L9.2 8.6Z' fill='%23f5d6a0' stroke='%232b2b2b' stroke-width='1.6'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Patrick+Hand&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/journal.css" />
+</head>
+<body>
+
+<main class="page" id="page" data-page="idea" data-tab="ideas" data-title="IDEA FILE">
+
+  <div class="crumbs">
+    <a class="linkish" href="ideas.html">← back to the board</a>
+    <span class="save-state" id="saveState" aria-live="polite"></span>
+  </div>
+
+  <div class="card sketch" id="notFound" hidden style="margin-top:22px;text-align:center">
+    <h2>hmm, this idea isn't here</h2>
+    <p class="muted">It may have been deleted, or it lives in a different browser.</p>
+    <a class="btn sketch press" href="ideas.html">go to the idea board</a>
+  </div>
+
+  <div class="detail" id="detail" hidden>
+    <!-- ============ MAIN COLUMN ============ -->
+    <div class="stack">
+      <article class="card sketch idea-main" id="ideaMain" aria-label="Idea">
+        <label for="ideaTitle" class="sr-only">Idea title</label>
+        <input class="title-input" id="ideaTitle" maxlength="120" />
+        <div class="status-picker" id="statusPicker" role="group" aria-label="Status"></div>
+
+        <span class="field-label" id="tagsLabel">tags</span>
+        <div class="tag-editor" id="tagEditor" aria-labelledby="tagsLabel">
+          <input id="tagInput" maxlength="24" placeholder="+ add tag (enter)" aria-label="Add tag" />
+        </div>
+
+        <label class="field-label" for="ideaSummary">the spark ✦ <small>what is it, why does it matter?</small></label>
+        <textarea class="paper-input" id="ideaSummary" maxlength="4000"></textarea>
+
+        <label class="field-label" for="ideaHypothesis">hypothesis / what if… 🧪</label>
+        <textarea class="paper-input" id="ideaHypothesis" maxlength="4000" placeholder="If ___, then ___, because ___."></textarea>
+
+        <label class="field-label" for="ideaNext">next tiny step →</label>
+        <input class="line-input" id="ideaNext" maxlength="200" placeholder="the smallest thing that moves this forward" />
+
+        <div class="idea-meta" id="ideaMeta"></div>
+      </article>
+
+      <article class="card sketch press notes-card" aria-labelledby="notesTitle">
+        <div class="card-head">
+          <h2 id="notesTitle">research notes 📝</h2>
+          <span class="pill" id="noteCount"></span>
+        </div>
+        <form id="noteForm" autocomplete="off">
+          <label for="noteText" class="sr-only">New research note</label>
+          <textarea class="paper-input small" id="noteText" maxlength="4000" placeholder="an observation, a result, a quote, a hunch…"></textarea>
+          <div class="compose-foot">
+            <span class="hint"><kbd>ctrl</kbd> + <kbd>enter</kbd> to add · timestamped automatically</span>
+            <button type="submit" class="btn sketch press" id="noteBtn">add note ★</button>
+          </div>
+        </form>
+        <ul class="timeline" id="noteList" style="margin-top:8px"></ul>
+      </article>
+    </div>
+
+    <!-- ============ SIDE COLUMN ============ -->
+    <div class="stack">
+      <article class="card sketch press side-card" aria-labelledby="qTitle">
+        <h2 id="qTitle">open questions ❓</h2>
+        <ul class="need-list" id="questionList"></ul>
+        <form class="inline-form" id="questionForm" autocomplete="off">
+          <label for="questionInput" class="sr-only">New question</label>
+          <input class="line-input" id="questionInput" maxlength="200" placeholder="+ what don't I know yet?" />
+          <button type="submit" class="btn white sketch press">add</button>
+        </form>
+      </article>
+
+      <article class="card sketch press side-card" aria-labelledby="srcTitle">
+        <div class="card-head">
+          <h2 id="srcTitle">sources 📚</h2>
+          <a class="linkish" href="library.html">library →</a>
+        </div>
+        <ul class="source-mini" id="sourceList"></ul>
+        <div class="inline-form">
+          <label for="sourcePick" class="sr-only">Link a source from your library</label>
+          <select class="select" id="sourcePick" style="flex:1 1 160px"></select>
+          <button type="button" class="btn white sketch press" id="linkSource">link</button>
+        </div>
+        <form class="inline-form" id="quickSource" autocomplete="off" style="margin-top:12px">
+          <label for="qsTitle" class="sr-only">New source title</label>
+          <input class="line-input" id="qsTitle" maxlength="200" placeholder="+ new source title" />
+          <label for="qsUrl" class="sr-only">Link (optional)</label>
+          <input class="line-input" id="qsUrl" maxlength="500" placeholder="https://… (optional)" />
+          <button type="submit" class="btn white sketch press">add</button>
+        </form>
+      </article>
+
+      <article class="card sketch press side-card" aria-labelledby="logTitle">
+        <div class="card-head">
+          <h2 id="logTitle">from the log 📓</h2>
+          <a class="linkish" id="writeLog" href="log.html">write about it →</a>
+        </div>
+        <ul class="timeline" id="relatedLog"></ul>
+      </article>
+
+      <div class="danger-zone">
+        <button type="button" class="btn danger sketch press" id="deleteIdea">delete this idea</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="assets/core.js"></script>
+<script src="assets/idea.js"></script>
+</body>
+</html>
